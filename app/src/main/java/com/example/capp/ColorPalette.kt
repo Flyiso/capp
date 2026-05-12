@@ -27,6 +27,11 @@ data class ColorPalette(
     private val boxViews = mutableListOf<ImageView>()
     private val textViews = mutableListOf<TextView>()
 
+    val hsvStrings: MutableList<String> = mutableListOf()
+    val rgbStrings: MutableList<String> = mutableListOf()
+    val hexStrings: MutableList<String> = mutableListOf()
+    val cmyStrings: MutableList<String> = mutableListOf()
+
     fun Int.dpToPx(): Int {
         val density = Resources.getSystem().displayMetrics.density
         return (this * density).toInt()
@@ -55,13 +60,22 @@ data class ColorPalette(
                 FrameLayout.LayoutParams.MATCH_PARENT
             )
             // Add padding at the top so text doesn't cover boxes if you want
-            setPadding(0, 48, 0, 0)
+            setPadding(0, 40, 0, 0)
         }
         frameWrapper.addView(colorBoxesContainer)
 
         hueShifts.forEachIndexed { i, shift ->
-            val box = inflater.inflate(R.layout.palette_item, colorBoxesContainer, false) as ImageView
-            val params = box.layoutParams as LinearLayout.LayoutParams
+
+            val itemWrapper = FrameLayout(context).apply {
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 2f)
+            }
+
+            // 2. YOUR ORIGINAL BOX LOGIC (Unchanged, just added to itemWrapper)
+            val box = inflater.inflate(R.layout.palette_item, itemWrapper, false) as ImageView
+            val params = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
 
             when {
                 hueShifts.size == 1 -> {
@@ -81,8 +95,32 @@ data class ColorPalette(
                     params.setMargins(2.dpToPx(), 6.dpToPx(), 2.dpToPx(), 3.dpToPx())
                 }
             }
-            colorBoxesContainer.addView(box)
+            box.layoutParams = params
+            box.elevation = 2f
+
+            // 3. THE TEXT VIEW (Created here, stacked on top of the box)
+            val hsvText = TextView(context).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                setPadding(16.dpToPx(), 20.dpToPx(), 0, 0)
+                gravity = Gravity.LEFT
+                setTextColor(Color.WHITE)
+                textSize = 10f
+                setShadowLayer(4f, 0f, 0f, Color.BLACK)
+                alpha = 0f
+                elevation = 8f //
+            }
+
+            // 4. ADDING TO LAYOUT
+            itemWrapper.addView(box)      // Bottom Layer
+            itemWrapper.addView(hsvText)  // Top Layer
+
+            colorBoxesContainer.addView(itemWrapper) // Add the whole unit to your row
+
             boxViews.add(box)
+            textViews.add(hsvText)
         }
 
         // 3. Add the Name Label (top layer)
@@ -123,6 +161,11 @@ data class ColorPalette(
         params.verticalWeight = 3f
         blurView.layoutParams = params
         isExpanded = true
+        textViews.forEach { textView ->
+            textView.animate()
+                .alpha(1f)
+                .setDuration(300)
+                .start() }
     }
 
     fun collapse() {
@@ -134,9 +177,18 @@ data class ColorPalette(
         params.verticalWeight = 1f // Return to normal weight
         blurView.layoutParams = params
         isExpanded = false
+        textViews.forEach { textView ->
+            textView.animate()
+                .alpha(0f)
+                .setDuration(300)
+                .start()}
     }
 
     fun applyColors(baseHsv: FloatArray) {
+        hsvStrings.clear()
+        rgbStrings.clear()
+        hexStrings.clear()
+        cmyStrings.clear()
         boxViews.forEachIndexed { index: Int, imageView: ImageView ->
             val hueShift = hueShifts[index]
             val satShift = satShifts[index]
@@ -145,7 +197,43 @@ data class ColorPalette(
             newHsv[0] = ((newHsv[0] + hueShift) % 360 + 360) % 360
             newHsv[1] = ((newHsv[1] + (satShift/100)) % 1 + 1) % 1
             newHsv[2] = ((newHsv[2] + (valShift/100)) % 1 + 1) % 1
-            imageView.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.HSVToColor(newHsv))
+            val colorInt = android.graphics.Color.HSVToColor(newHsv)
+            imageView.backgroundTintList = android.content.res.ColorStateList.valueOf(colorInt)
+
+
+            // 1. Store HSV String
+            val h = newHsv[0].toInt()
+            val s = (newHsv[1] * 100).toInt()
+            val v = (newHsv[2] * 100).toInt()
+            hsvStrings.add("HSV($h°, $s%, $v%)")
+
+
+            // 3. Store RGB String
+            val r = android.graphics.Color.red(colorInt)
+            val g = android.graphics.Color.green(colorInt)
+            val b = android.graphics.Color.blue(colorInt)
+            rgbStrings.add("RGB($r, $g, $b)")
+
+            // 4. Store HEX String
+            val hex = String.format("#%06X", (0xFFFFFF and colorInt))
+            hexStrings.add(hex)
+
+            // 5. Store CMY String
+            val c = (1f - (r / 255f)) * 100
+            val m = (1f - (g / 255f)) * 100
+            val y = (1f - (b / 255f)) * 100
+            cmyStrings.add("C:${c.toInt()}% M:${m.toInt()}% Y:${y.toInt()}%")
+
+
+            if (index < textViews.size) {
+                val h = newHsv[0].toInt()
+                val s = (newHsv[1] * 100).toInt()
+                val v = (newHsv[2] * 100).toInt()
+
+                // This sets the string that appears over the color box
+                textViews[index].text = "H:$h\nS:$s\nV:$v"
+            }
+            textViews[index].text = "Hue: ${newHsv[0].toInt()}\nSat: ${(newHsv[1]*100).toInt()}\nVal: ${(newHsv[2]*100).toInt()}"
         }
     }
 }
