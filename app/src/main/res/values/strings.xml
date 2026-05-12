@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">CApp</string>
+    <string name="overlay_image">overlay image</string>
 </resources>

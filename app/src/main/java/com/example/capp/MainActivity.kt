@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.RectF
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.camera.core.CameraSelector
@@ -16,59 +17,104 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.capp.databinding.ActivityMainBinding
-import eightbitlab.com.blurview.RenderScriptBlur
-import eightbitlab.com.blurview.BlurTarget
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+
+
 
 
 
 class MainActivity : androidx.activity.ComponentActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var palettes: List<ColorPalette>
-    private lateinit var blurSections: List<eightbitlab.com.blurview.BlurView>
     private val REQUEST_CODE_PERMISSIONS = 10
     private val REQUIRED_PERMISSIONS = arrayOf(android.Manifest.permission.CAMERA)
 
     private lateinit var cameraExecutor: ExecutorService
+    private var isCameraFrozen = false
 
+    private fun getAverageHsv(bitmap: Bitmap): FloatArray {
+        val tinyBitmap = Bitmap.createScaledBitmap(bitmap, 1, 1, true)
+        val averageColor = tinyBitmap.getPixel(0, 0)
+        val hsv = FloatArray(3)
+        Color.colorToHSV(averageColor, hsv)
+        tinyBitmap.recycle()
+        return hsv
+    }
+    val onExpandCallback = { clickedPalette: ColorPalette, isExpanding: Boolean ->
+        isCameraFrozen = isExpanding
+        if (isExpanding) {
+            binding.frozenOverlay.visibility = View.VISIBLE
+        } else {
+            binding.frozenOverlay.visibility = View.GONE
+        }
+        palettes.forEach { if (it != clickedPalette) it.collapse() }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        binding.scannerOverlay.setOnRectChangedListener(object : ScannerOverlay.OnRectChangedListener {
+            override fun onRectChanged(rect: RectF) {
+                if (isCameraFrozen) {
+                    val sourceBitmap = lastFullBitmap ?: return
+                    val cropped = cropToScanner(sourceBitmap, rect)
+                    val hsv = getAverageHsv(cropped)
+                    palettes.forEach { it.applyColors(hsv) }
+                }
+            }
+        })
         hideSystemUI()
 
+        val onExpandCallback = { clickedPalette: ColorPalette, isExpanding: Boolean ->
+            isCameraFrozen = isExpanding
+            palettes.forEach {
+                if (it != clickedPalette) it.collapse()
+            }
+        }
+        val allPalettes = mutableListOf<ColorPalette>()
         palettes = listOf(
-            ColorPalette("Complementary", binding.sectionComp, binding.sectionCompBlur, listOf(0f, 180f)),
-            ColorPalette("Analogous", binding.sectionAnalog, binding.sectionAnalogBlur, listOf(-30f, 0f, 30f)),
-            ColorPalette("Splitcomp", binding.sectionSplitcomp, binding.sectionSplitcompBlur, listOf(0f, 150f, 210f)),
-            ColorPalette("Triadic", binding.sectionTri, binding.sectionTriBlur, listOf(0f, 120f, 240f)),
-            ColorPalette("Square", binding.sectionSquare, binding.sectionSquareBlur, listOf(0f, 90f, 180f, 270f)),
-            ColorPalette("Tetradic", binding.sectionTet, binding.sectionTetBlur, listOf(0f, 60f, 180f, 240f))
-        )
+            ColorPalette("Complementary", binding.sectionComp, binding.sectionCompBlur,
+                listOf(0f, 180f), listOf(0f, 0f), listOf(0f, 0f),
+                onExpandCallback),
+            ColorPalette("Analogous", binding.sectionAnalog, binding.sectionAnalogBlur,
+                listOf(0f, 30f, -30f), listOf(0f, 0f, 0f), listOf(0f, 0f, 0f),
+                onExpandCallback),
+            ColorPalette("Split Complementary", binding.sectionSplitcomp, binding.sectionSplitcompBlur,
+                listOf(0f, 150f, 210f) , listOf(0f, 0f, 0f), listOf(0f, 0f, 0f),
+                onExpandCallback),
+            ColorPalette("Triadic", binding.sectionTri, binding.sectionTriBlur,
+                listOf(0f, 120f, 240f), listOf(0f, 0f, 0f), listOf(0f, 0f, 0f),
+                onExpandCallback),
+            ColorPalette("Square", binding.sectionSquare, binding.sectionSquareBlur,
+                listOf(0f, 90f, 180f, 270f), listOf(0f, 0f, 0f, 0f), listOf(0f, 0f, 0f, 0f),
+                onExpandCallback),
+            ColorPalette("Tetradic", binding.sectionTet, binding.sectionTetBlur,
+                listOf(0f, 60f, 180f, 240f), listOf(0f, 0f, 0f, 0f), listOf(0f, 0f, 0f, 0f),
+                onExpandCallback),
+            ColorPalette("Monochromatic",binding.sectionMono,binding.sectionMonoBlur,
+                listOf(0f, 0f, 0f, 0f, 0f),listOf(-35f, -0f, 10f, 20f, -70f),listOf(15f, 0f, -25f, -50f, 20f),
+                onExpandCallback))
+
         binding.root.post {
             palettes.forEach { palette ->
-                // 1. Setup the Blur
+                allPalettes.add(palette)
                 palette.blurView.setupWith(binding.blurTargetRoot)
                     .setBlurRadius(15f)
 
-                // 2. Inflate the color boxes
                 palette.inflate(this)
             }
         }
 
         cameraExecutor = Executors.newSingleThreadExecutor()
 
-
         if (allPermissionsGranted()) {
             startCamera()
         } else {
             ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
         }
-
-
-
     }
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
@@ -89,10 +135,11 @@ class MainActivity : androidx.activity.ComponentActivity() {
         windowInsetsController.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
     }
 
-    // --- PASTE THE STARTCAMERA FUNCTION BELOW THIS LINE ---
-    private fun startCamera() {
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+    private var lastFullBitmap: Bitmap? = null
 
+    private fun startCamera() {
+
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener({
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
 
@@ -100,31 +147,40 @@ class MainActivity : androidx.activity.ComponentActivity() {
                 it.surfaceProvider = binding.viewFinder.surfaceProvider
             }
 
-            // image analysis
-
             val imageAnalysis = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
             imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
+                if (isCameraFrozen) {
+                    imageProxy.close()
+                    return@setAnalyzer
+                }
+
                 val rotation = imageProxy.imageInfo.rotationDegrees
                 val uiRect = binding.scannerOverlay.getSelectionRect()
                 val bitmap = imageProxy.toBitmap()
                 val rotatedBitmap = rotateBitmap(bitmap, rotation)
+                lastFullBitmap = rotatedBitmap
+
                 val finalBitmap = cropToScanner(rotatedBitmap, uiRect)
-
                 //showDebugCrop(finalBitmap)
-
                 val tinyBitmap = Bitmap.createScaledBitmap(finalBitmap, 1, 1, true)
                 val averageColor = tinyBitmap.getPixel(0, 0)
                 val hsv = FloatArray(3)
                 Color.colorToHSV(averageColor, hsv)
 
+
                 runOnUiThread {
+
+                    binding.frozenOverlay.setImageBitmap(rotatedBitmap)
+                    binding.frozenOverlay.visibility = View.VISIBLE
+
                     palettes.forEach { palette ->
                         palette.applyColors(hsv)
                     }
+
                 }
-                tinyBitmap.recycle()
+
                 imageProxy.close()
             }
 
@@ -140,30 +196,36 @@ class MainActivity : androidx.activity.ComponentActivity() {
         }, ContextCompat.getMainExecutor(this))
 
     }
+
+
     private fun rotateBitmap(bitmap: Bitmap, rotationDegrees: Int): Bitmap {
         if (rotationDegrees == 0) return bitmap
         val matrix = android.graphics.Matrix()
         matrix.postRotate(rotationDegrees.toFloat())
         return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
     }
-
-
     private fun cropToScanner(fullFrame: Bitmap, uiRect: RectF): Bitmap {
-        val ratio =  binding.scannerOverlay.height / binding.scannerOverlay.width
-        val scaleX = fullFrame.width.toFloat() / binding.scannerOverlay.width
-        val v = fullFrame.width.toFloat() * ratio
-        //val scaleY = fullFrame.height.toFloat() / binding.scannerOverlay.height
-        val scaleY = v / binding.scannerOverlay.height
-        val left = (uiRect.left * scaleX).toInt()
-        val top = (uiRect.top * scaleY).toInt()
-        val width = (uiRect.width() * scaleX).toInt()
-        val height = (uiRect.height() * scaleY).toInt()
-        val safeLeft = left.coerceIn(0, fullFrame.width - 1)
-        val safeTop = top.coerceIn(0, fullFrame.height - 1)
-        val safeWidth = width.coerceAtMost(fullFrame.width - safeLeft).coerceAtLeast(1)
-        val safeHeight = height.coerceAtMost(fullFrame.height - safeTop).coerceAtLeast(1)
-        return Bitmap.createBitmap(fullFrame, safeLeft, safeTop, safeWidth, safeHeight)
+        val overlay = binding.scannerOverlay
+
+        val viewW = overlay.width.toFloat()
+
+        val bmpW = fullFrame.width.toFloat()
+
+        val scale = bmpW / viewW
+
+        val cropL = (uiRect.left * scale).toInt()
+        val cropT = (uiRect.top * scale).toInt()
+        val cropW = (uiRect.width() * scale).toInt()
+        val cropH = ((uiRect.height() * scale)).toInt()
+
+        val x = cropL.coerceIn(0, fullFrame.width - 1)
+        val y = cropT.coerceIn(0, fullFrame.height - 1)
+        val w = cropW.coerceAtMost(fullFrame.width - x).coerceAtLeast(1)
+        val h = cropH.coerceAtMost(fullFrame.height - y).coerceAtLeast(1)
+
+        return Bitmap.createBitmap(fullFrame, x, y, w, h)
     }
+
 
     override fun onDestroy() {
         super.onDestroy()

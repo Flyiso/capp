@@ -11,8 +11,6 @@ import android.view.ScaleGestureDetector
 import android.view.View
 
 class ScannerOverlay(context: Context, attrs: AttributeSet?) : View(context, attrs) {
-
-    // The default wide border paint
     private val defaultPaint = Paint().apply {
         color = Color.WHITE
         style = Paint.Style.STROKE
@@ -102,88 +100,98 @@ class ScannerOverlay(context: Context, attrs: AttributeSet?) : View(context, att
         val initialHeight = h * 0.5f
         rect.set((w - initialWidth) / 2, (h - initialHeight) / 2, (w + initialWidth) / 2, (h + initialHeight) / 2)
     }
+    interface OnRectChangedListener {
+        fun onRectChanged(rect: RectF)
+    }
+    private var onRectChangedListener: OnRectChangedListener? = null
+
+    fun setOnRectChangedListener(listener: OnRectChangedListener) {
+        this.onRectChangedListener = listener
+    }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        val x = event.x
-        val y = event.y
 
-        when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN -> {
-                lastX = x
-                lastY = y
-                activeHandles.addAll(getTouchHandles(x, y))
-            }
-
-            MotionEvent.ACTION_POINTER_DOWN -> {
-                // For multi-touch, we just add the new handles
-                val px = event.getX(event.actionIndex)
-                val py = event.getY(event.actionIndex)
-                activeHandles.addAll(getTouchHandles(px, py))
-            }
-
-            MotionEvent.ACTION_MOVE -> {
-                val dx = x - lastX
-                val dy = y - lastY
-
-                // 1. Handle MOVE (Entire Rectangle)
-                if (activeHandles.contains(Handle.MOVE)) {
-                    rect.offset(dx, dy)
-                    // Clamp to view bounds
-                    if (rect.left < 0) rect.offset(-rect.left, 0f)
-                    if (rect.top < 0) rect.offset(0f, -rect.top)
-                    if (rect.right > width) rect.offset(width - rect.right, 0f)
-                    if (rect.bottom > height) rect.offset(0f, height - rect.bottom)
+            val x = event.x
+            val y = event.y
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    lastX = x
+                    lastY = y
+                    activeHandles.addAll(getTouchHandles(x, y))
                 }
 
-                // 2. Handle RESIZING (Individual fingers)
-                // We use a loop for resizing to support multi-finger stretching
-                for (i in 0 until event.pointerCount) {
-                    val px = event.getX(i)
-                    val py = event.getY(i)
+                MotionEvent.ACTION_POINTER_DOWN -> {
+                    // For multi-touch, we just add the new handles
+                    val px = event.getX(event.actionIndex)
+                    val py = event.getY(event.actionIndex)
+                    activeHandles.addAll(getTouchHandles(px, py))
+                }
 
-                    // Important: Only resize if we aren't currently "Moving" the whole box
-                    if (!activeHandles.contains(Handle.MOVE)) {
-                        // We check which handle this specific finger is near
-                        val fingerHandles = getTouchHandles(px, py)
-                        for (handle in fingerHandles) {
-                            if (activeHandles.contains(handle)) {
-                                when (handle) {
-                                    Handle.LEFT -> rect.left = px.coerceIn(0f, rect.right - minSize)
-                                    Handle.RIGHT -> rect.right = px.coerceIn(rect.left + minSize, width.toFloat())
-                                    Handle.TOP -> rect.top = py.coerceIn(0f, rect.bottom - minSize)
-                                    Handle.BOTTOM -> rect.bottom = py.coerceIn(rect.top + minSize, height.toFloat())
-                                    Handle.TOP_LEFT -> {
-                                        rect.left = px.coerceIn(0f, rect.right - minSize)
-                                        rect.top = py.coerceIn(0f, rect.bottom - minSize)
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = x - lastX
+                    val dy = y - lastY
+
+                    // 1. Handle MOVE (Entire Rectangle)
+                    if (activeHandles.contains(Handle.MOVE)) {
+                        rect.offset(dx, dy)
+                        // Clamp to view bounds
+                        if (rect.left < 0) rect.offset(-rect.left, 0f)
+                        if (rect.top < 0) rect.offset(0f, -rect.top)
+                        if (rect.right > width) rect.offset(width - rect.right, 0f)
+                        if (rect.bottom > height) rect.offset(0f, height - rect.bottom)
+                    }
+
+                    // 2. Handle RESIZING (Individual fingers)
+                    // We use a loop for resizing to support multi-finger stretching
+                    for (i in 0 until event.pointerCount) {
+                        val px = event.getX(i)
+                        val py = event.getY(i)
+
+                        // Important: Only resize if we aren't currently "Moving" the whole box
+                        if (!activeHandles.contains(Handle.MOVE)) {
+                            // We check which handle this specific finger is near
+                            val fingerHandles = getTouchHandles(px, py)
+                            for (handle in fingerHandles) {
+                                if (activeHandles.contains(handle)) {
+                                    when (handle) {
+                                        Handle.LEFT -> rect.left = px.coerceIn(0f, rect.right - minSize)
+                                        Handle.RIGHT -> rect.right = px.coerceIn(rect.left + minSize, width.toFloat())
+                                        Handle.TOP -> rect.top = py.coerceIn(0f, rect.bottom - minSize)
+                                        Handle.BOTTOM -> rect.bottom = py.coerceIn(rect.top + minSize, height.toFloat())
+                                        Handle.TOP_LEFT -> {
+                                            rect.left = px.coerceIn(0f, rect.right - minSize)
+                                            rect.top = py.coerceIn(0f, rect.bottom - minSize)
+                                        }
+                                        Handle.TOP_RIGHT -> {
+                                            rect.right = px.coerceIn(rect.left + minSize, width.toFloat())
+                                            rect.top = py.coerceIn(0f, rect.bottom - minSize)
+                                        }
+                                        Handle.BOTTOM_LEFT -> {
+                                            rect.left = px.coerceIn(0f, rect.right - minSize)
+                                            rect.bottom = py.coerceIn(rect.top + minSize, height.toFloat())
+                                        }
+                                        Handle.BOTTOM_RIGHT -> {
+                                            rect.right = px.coerceIn(rect.left + minSize, width.toFloat())
+                                            rect.bottom = py.coerceIn(rect.top + minSize, height.toFloat())
+                                        }
+                                        else -> {}
                                     }
-                                    Handle.TOP_RIGHT -> {
-                                        rect.right = px.coerceIn(rect.left + minSize, width.toFloat())
-                                        rect.top = py.coerceIn(0f, rect.bottom - minSize)
-                                    }
-                                    Handle.BOTTOM_LEFT -> {
-                                        rect.left = px.coerceIn(0f, rect.right - minSize)
-                                        rect.bottom = py.coerceIn(rect.top + minSize, height.toFloat())
-                                    }
-                                    Handle.BOTTOM_RIGHT -> {
-                                        rect.right = px.coerceIn(rect.left + minSize, width.toFloat())
-                                        rect.bottom = py.coerceIn(rect.top + minSize, height.toFloat())
-                                    }
-                                    else -> {}
                                 }
                             }
                         }
                     }
+                    lastX = x
+                    lastY = y
+                    onRectChangedListener?.onRectChanged(getSelectionRect())
+                    invalidate()
                 }
-                lastX = x
-                lastY = y
-                invalidate()
-            }
 
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_CANCEL -> {
-                activeHandles.clear()
-                invalidate()
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_CANCEL -> {
+                    activeHandles.clear()
+                    invalidate()
+                }
             }
-        }
         return true
     }
+
 }
