@@ -19,12 +19,21 @@ import androidx.core.content.ContextCompat
 import com.example.capp.databinding.ActivityMainBinding
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+// new imports
+import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.MotionEvent
+import android.view.WindowManager
+import android.widget.LinearLayout
+import android.widget.PopupWindow
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import android.widget.RadioGroup
 
 
 
 
-
-class MainActivity : androidx.activity.ComponentActivity() {
+// class MainActivity : androidx.activity.ComponentActivity()
+class MainActivity : androidx.appcompat.app.AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var palettes: List<ColorPalette>
     private val REQUEST_CODE_PERMISSIONS = 10
@@ -32,6 +41,9 @@ class MainActivity : androidx.activity.ComponentActivity() {
 
     private lateinit var cameraExecutor: ExecutorService
     private var isCameraFrozen = false
+    private var currentColorMode = "HSV"
+    private var currentCameraMode = "BACK"
+    private var lastSetColor = floatArrayOf(0f, 1f, 1f)
 
     private fun getAverageHsv(bitmap: Bitmap): FloatArray {
         val tinyBitmap = Bitmap.createScaledBitmap(bitmap, 1, 1, true)
@@ -53,6 +65,10 @@ class MainActivity : androidx.activity.ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val prefs = getSharedPreferences("AppSettings", MODE_PRIVATE)
+        currentColorMode = prefs.getString("color_mode", "HSL") ?: "HSL"
+        currentCameraMode = prefs.getString("camera_mode", "BACK") ?: "BACK"
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -62,7 +78,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
                     val sourceBitmap = lastFullBitmap ?: return
                     val cropped = cropToScanner(sourceBitmap, rect)
                     val hsv = getAverageHsv(cropped)
-                    palettes.forEach { it.applyColors(hsv) }
+                    palettes.forEach { it.applyColors(hsv, currentColorMode) }
+                    lastSetColor = hsv
                 }
             }
         })
@@ -109,6 +126,7 @@ class MainActivity : androidx.activity.ComponentActivity() {
         }
 
         cameraExecutor = Executors.newSingleThreadExecutor()
+        setupDraggableFab()  // new
 
         if (allPermissionsGranted()) {
             startCamera()
@@ -176,7 +194,8 @@ class MainActivity : androidx.activity.ComponentActivity() {
                     binding.frozenOverlay.visibility = View.VISIBLE
 
                     palettes.forEach { palette ->
-                        palette.applyColors(hsv)
+                        palette.applyColors(hsv, currentColorMode)
+                        lastSetColor = hsv
                     }
 
                 }
@@ -184,8 +203,13 @@ class MainActivity : androidx.activity.ComponentActivity() {
                 imageProxy.close()
             }
 
+            //val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+            val cameraSelector = if (currentCameraMode == "FRONT") {
+                CameraSelector.DEFAULT_FRONT_CAMERA
+            } else {
+                CameraSelector.DEFAULT_BACK_CAMERA
+            }
 
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
             try {
                 cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis)
@@ -263,5 +287,134 @@ class MainActivity : androidx.activity.ComponentActivity() {
                 android.util.Log.e("DebugCrop", "Failed to show debug view: ${e.message}")
             }
         }
+    }
+
+    // new below here
+    private fun setupDraggableFab() {
+        val fab = binding.fabSettings
+        var dX = 0f
+        var dY = 0f
+        var lastAction = 0
+
+        // 1. Standard click listener for Accessibility and Taps
+        fab.setOnClickListener {
+            showSettingsPopup()
+        }
+
+        // 2. Touch listener for Dragging logic
+        fab.setOnTouchListener { view, event ->
+            val screenWidth = resources.displayMetrics.widthPixels
+            val screenHeight = resources.displayMetrics.heightPixels
+
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    dX = view.x - event.rawX
+                    dY = view.y - event.rawY
+                    lastAction = MotionEvent.ACTION_DOWN
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    var newX = event.rawX + dX
+                    var newY = event.rawY + dY
+
+                    newX = newX.coerceIn(0f, (screenWidth - view.width).toFloat())
+                    newY = newY.coerceIn(0f, (screenHeight - view.height).toFloat())
+
+                    view.x = newX
+                    view.y = newY
+
+                    // If the finger moves significantly, mark it as a MOVE
+                    if (Math.abs(event.rawX + dX - view.x) > 5 || Math.abs(event.rawY + dY - view.y) > 5) {
+                        lastAction = MotionEvent.ACTION_MOVE
+                    }
+                }
+                MotionEvent.ACTION_UP -> {
+                    if (lastAction == MotionEvent.ACTION_DOWN) {
+                        // This triggers the setOnClickListener defined above
+                        view.performClick()
+                    } else {
+                        // Snap to edge
+                        val middle = screenWidth / 2
+                        val nearestX = if (view.x + (view.width / 2) < middle) 0f
+                        else (screenWidth - view.width).toFloat()
+
+                        view.animate().x(nearestX).setDuration(200).start()
+                    }
+                }
+            }
+            true
+        }
+    }
+
+    private fun showSettingsPopup() {
+
+        val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
+        val popupView = inflater.inflate(R.layout.popup_settings, null)
+        val popupWindow = PopupWindow(
+            popupView,
+            (resources.displayMetrics.widthPixels * 0.8).toInt(),
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            true
+        )
+
+        val radioGroup = popupView.findViewById<RadioGroup>(R.id.radioGroupFormat)
+
+        // --- ADD THIS PART TO REMEMBER THE CHOICE WHILE THE APP IS RUNNING ---
+        when (currentColorMode) {
+            "RGB" -> radioGroup.check(R.id.radioRGB)
+            "HEX" -> radioGroup.check(R.id.radioHEX)
+            "HSV" -> radioGroup.check(R.id.radioHSV)
+            "CMY" -> radioGroup.check(R.id.radioCMY)
+        }
+
+        radioGroup.setOnCheckedChangeListener { group, checkedId ->
+            when (checkedId) {
+                R.id.radioRGB -> {
+                    Log.d("Settings", "Selected format: RGB")
+                    currentColorMode = "RGB"
+                }
+                R.id.radioHEX -> {
+                    Log.d("Settings", "Selected format: HEX")
+                    currentColorMode = "HEX"
+                }
+                R.id.radioHSV -> {
+                    Log.d("Settings", "Selected format: HSV")
+                    currentColorMode = "HSV"
+                }
+                R.id.radioCMY -> {
+                    Log.d("Settings", "Selected format: CMY")
+                    currentColorMode = "CMY"
+                }
+            }
+            val prefs = getSharedPreferences("AppSettings", MODE_PRIVATE)
+            prefs.edit().putString("color_mode", currentColorMode).apply()
+
+            palettes.forEach { palette ->
+                palette.updateColorText(lastSetColor, currentColorMode)
+            }
+        }
+        val radioGroupCamera = popupView.findViewById<RadioGroup>(R.id.radioGroupCamera)
+
+        // Sync UI to current camera state
+        when (currentCameraMode) {
+            "BACK" -> radioGroupCamera.check(R.id.radioBACK)
+            "FRONT" -> radioGroupCamera.check(R.id.radioFRONT)
+        }
+
+        radioGroupCamera.setOnCheckedChangeListener { _, checkedId ->
+            currentCameraMode = when (checkedId) {
+                R.id.radioBACK -> "BACK"
+                R.id.radioFRONT -> "FRONT"
+                else -> "BACK"
+            }
+
+            getSharedPreferences("AppSettings", MODE_PRIVATE).edit()
+                .putString("camera_mode", currentCameraMode).apply()
+
+            startCamera()
+        }
+
+        binding.root.alpha = 0.5f
+        popupWindow.setOnDismissListener { binding.root.alpha = 1.0f }
+        popupWindow.showAtLocation(binding.root, Gravity.CENTER, 0, 0)
     }
 }

@@ -10,6 +10,7 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
 
+
 class ScannerOverlay(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     private val defaultPaint = Paint().apply {
         color = Color.WHITE

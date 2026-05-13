@@ -6,11 +6,23 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".MainActivity">
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabSettings"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:srcCompat="@drawable/cog_svgrepo_com"
+        app:tint="@android:color/white" />
+
+
     <eightbitlab.com.blurview.BlurTarget
         android:id="@+id/blur_target_root"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
-
 
         <androidx.camera.view.PreviewView
             android:id="@+id/viewFinder"
@@ -18,6 +30,8 @@
             android:layout_height="match_parent"
             app:implementationMode="compatible"
             app:scaleType="fitStart">
+
+
         </androidx.camera.view.PreviewView>
         <ImageView
             android:id="@+id/frozenOverlay"

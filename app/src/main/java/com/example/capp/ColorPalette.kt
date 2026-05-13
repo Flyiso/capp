@@ -1,6 +1,7 @@
 package com.example.capp
 
 import android.content.Context
+import android.content.Context.MODE_PRIVATE
 import android.content.res.Resources
 import android.view.LayoutInflater
 import android.widget.ImageView
@@ -183,8 +184,57 @@ data class ColorPalette(
                 .setDuration(300)
                 .start()}
     }
+    fun updateColorText(baseHsv: FloatArray, mode: String){
+        hsvStrings.clear()
+        rgbStrings.clear()
+        hexStrings.clear()
+        cmyStrings.clear()
+        boxViews.forEachIndexed { index: Int, imageView: ImageView ->
+            val hueShift = hueShifts[index]
+            val satShift = satShifts[index]
+            val valShift = valShifts[index]
+            val newHsv = baseHsv.copyOf()
+            newHsv[0] = ((newHsv[0] + hueShift) % 360 + 360) % 360
+            newHsv[1] = ((newHsv[1] + (satShift/100)) % 1 + 1) % 1
+            newHsv[2] = ((newHsv[2] + (valShift/100)) % 1 + 1) % 1
+            val colorInt = android.graphics.Color.HSVToColor(newHsv)
 
-    fun applyColors(baseHsv: FloatArray) {
+            // 1. Store HSV String
+            val h = newHsv[0].toInt()
+            val s = (newHsv[1] * 100).toInt()
+            val v = (newHsv[2] * 100).toInt()
+            hsvStrings.add("Hue: ${newHsv[0].toInt()}\nSat: ${(newHsv[1]*100).toInt()}\nVal: ${(newHsv[2]*100).toInt()}")
+
+            // 3. Store RGB String
+            val r = android.graphics.Color.red(colorInt)
+            val g = android.graphics.Color.green(colorInt)
+            val b = android.graphics.Color.blue(colorInt)
+            rgbStrings.add("Red: ${r}\nGreen: ${g}\nBlue: ${b}")
+
+            // 4. Store HEX String
+            val hex = String.format("#%06X", (0xFFFFFF and colorInt))
+            hexStrings.add(hex)
+
+            // 5. Store CMY String
+            val c = (1f - (r / 255f)) * 100
+            val m = (1f - (g / 255f)) * 100
+            val y = (1f - (b / 255f)) * 100
+            cmyStrings.add("Cyan:${c.toInt()}% \nMagenta:${m.toInt()}% \nYellow:${y.toInt()}%")
+
+            if (index < textViews.size) {
+
+                val displayString = when (mode) {
+                    "RGB" -> rgbStrings[index]
+                    "HEX" -> hexStrings[index]
+                    "HSV" -> hsvStrings[index]
+                    "CMY" -> cmyStrings[index]
+                    else -> hsvStrings[index] // Default fallback
+                }
+                textViews[index].text = displayString
+            }
+        }
+    }
+    fun applyColors(baseHsv: FloatArray, mode: String) {
         hsvStrings.clear()
         rgbStrings.clear()
         hexStrings.clear()
@@ -205,14 +255,14 @@ data class ColorPalette(
             val h = newHsv[0].toInt()
             val s = (newHsv[1] * 100).toInt()
             val v = (newHsv[2] * 100).toInt()
-            hsvStrings.add("HSV($h°, $s%, $v%)")
+            hsvStrings.add("Hue: ${newHsv[0].toInt()}\nSat: ${(newHsv[1]*100).toInt()}\nVal: ${(newHsv[2]*100).toInt()}")
 
 
             // 3. Store RGB String
             val r = android.graphics.Color.red(colorInt)
             val g = android.graphics.Color.green(colorInt)
             val b = android.graphics.Color.blue(colorInt)
-            rgbStrings.add("RGB($r, $g, $b)")
+            rgbStrings.add("Red: ${r}\nGreen: ${g}\nBlue: ${b}")
 
             // 4. Store HEX String
             val hex = String.format("#%06X", (0xFFFFFF and colorInt))
@@ -222,7 +272,7 @@ data class ColorPalette(
             val c = (1f - (r / 255f)) * 100
             val m = (1f - (g / 255f)) * 100
             val y = (1f - (b / 255f)) * 100
-            cmyStrings.add("C:${c.toInt()}% M:${m.toInt()}% Y:${y.toInt()}%")
+            cmyStrings.add("Cyan:${c.toInt()}% \nMagenta:${m.toInt()}% \nYellow:${y.toInt()}%")
 
 
             if (index < textViews.size) {
@@ -231,9 +281,19 @@ data class ColorPalette(
                 val v = (newHsv[2] * 100).toInt()
 
                 // This sets the string that appears over the color box
-                textViews[index].text = "H:$h\nS:$s\nV:$v"
+                //textViews[index].text = "H:$h\nS:$s\nV:$v"
             }
-            textViews[index].text = "Hue: ${newHsv[0].toInt()}\nSat: ${(newHsv[1]*100).toInt()}\nVal: ${(newHsv[2]*100).toInt()}"
+            if (index < textViews.size) {
+                // Determine which list of strings to use based on the user's setting
+                val displayString = when (mode) {
+                    "RGB" -> rgbStrings[index]
+                    "HEX" -> hexStrings[index]
+                    "HSV" -> hsvStrings[index]
+                    "CMY" -> cmyStrings[index]
+                    else -> hsvStrings[index] // Default fallback
+                }
+                textViews[index].text = displayString
+            }
         }
     }
 }
