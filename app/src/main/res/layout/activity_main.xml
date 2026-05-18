@@ -11,13 +11,16 @@
         android:id="@+id/fabSettings"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:srcCompat="@drawable/cog_svgrepo_com"
-        app:tint="@android:color/white" />
-
+        android:adjustViewBounds="false"
+        android:alpha="0.5"
+        app:backgroundTint="@color/blur_gray"
+        app:tint="@android:color/white"
+        app:borderWidth="0dp"
+        app:ensureMinTouchTargetSize="false"
+        android:src="@drawable/gear"
+        app:pressedTranslationZ="0dp"
+        app:fabCustomSize="60dp"
+        app:maxImageSize="59dp" />
 
     <eightbitlab.com.blurview.BlurTarget
         android:id="@+id/blur_target_root"
@@ -175,14 +178,16 @@
         app:layout_constraintBottom_toTopOf="@id/section_mono_blur"
         android:background="@drawable/section_bg"
         android:clipToOutline="true">
-    <LinearLayout
-        android:id="@+id/section_tet"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:padding="2dp">
-    </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/section_tet"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:foregroundTint="#5AFFFFFF"
+            android:foregroundTintMode="multiply"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="2dp"></LinearLayout>
     </eightbitlab.com.blurview.BlurView>
 
 
@@ -197,14 +202,15 @@
         app:layout_constraintBottom_toBottomOf="parent"
         android:background="@drawable/section_bg"
         android:clipToOutline="true">
+
         <LinearLayout
             android:id="@+id/section_mono"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical"
+            android:background="#04FFFFFF"
             android:gravity="center"
-            android:padding="2dp">
-        </LinearLayout>
+            android:orientation="vertical"
+            android:padding="1dp"></LinearLayout>
     </eightbitlab.com.blurview.BlurView>
 
 

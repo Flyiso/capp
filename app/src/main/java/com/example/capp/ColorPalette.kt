@@ -105,7 +105,7 @@ data class ColorPalette(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.MATCH_PARENT
                 )
-                setPadding(16.dpToPx(), 20.dpToPx(), 0, 0)
+                setPadding(10.dpToPx(), 20.dpToPx(), 0, 0)
                 gravity = Gravity.LEFT
                 setTextColor(Color.WHITE)
                 textSize = 10f
@@ -115,10 +115,10 @@ data class ColorPalette(
             }
 
             // 4. ADDING TO LAYOUT
-            itemWrapper.addView(box)      // Bottom Layer
-            itemWrapper.addView(hsvText)  // Top Layer
+            itemWrapper.addView(box)
+            itemWrapper.addView(hsvText)
 
-            colorBoxesContainer.addView(itemWrapper) // Add the whole unit to your row
+            colorBoxesContainer.addView(itemWrapper)
 
             boxViews.add(box)
             textViews.add(hsvText)
@@ -129,7 +129,7 @@ data class ColorPalette(
             text = name
             textSize = 16f
             setTextColor(Color.WHITE)
-            setPadding(24, 3, 24, 6) // Left, Top, Right, Bottom
+            setPadding(21, 3, 24, 6) // Left, Top, Right, Bottom
             // Subtle shadow makes white text visible over light colors
             setShadowLayer(4f, 2f, 2f, Color.BLACK)
 
@@ -280,19 +280,19 @@ data class ColorPalette(
                 val s = (newHsv[1] * 100).toInt()
                 val v = (newHsv[2] * 100).toInt()
 
-                // This sets the string that appears over the color box
-                //textViews[index].text = "H:$h\nS:$s\nV:$v"
             }
             if (index < textViews.size) {
-                // Determine which list of strings to use based on the user's setting
                 val displayString = when (mode) {
                     "RGB" -> rgbStrings[index]
                     "HEX" -> hexStrings[index]
                     "HSV" -> hsvStrings[index]
                     "CMY" -> cmyStrings[index]
-                    else -> hsvStrings[index] // Default fallback
+                    else -> hsvStrings[index]
                 }
                 textViews[index].text = displayString
+
+                //textViewNames[index].text = displayString
+                //textViewsValues[index].text = displayString
             }
         }
     }
