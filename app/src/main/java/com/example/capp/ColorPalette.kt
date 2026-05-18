@@ -13,6 +13,52 @@ import android.view.Gravity
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
+import kotlin.math.abs
+import kotlin.math.pow
+
+object NcsApproximator {
+
+    fun getEstimatedNcs(hue: Float, saturation: Float, value: Float): String {
+        val baseBlackness = (1f - value) * 100f
+        val blackness = baseBlackness.toInt().coerceIn(0, 99)
+
+        val baseChromaticness = saturation * value * 100f
+        val chromaticness = baseChromaticness.toInt().coerceIn(0, 99)
+
+        if (saturation < 0.06f) {
+            val grayBlackness = ((1f - value) * 100).toInt().coerceIn(0, 99)
+            val paddedGray = grayBlackness.toString().padStart(2, '0')
+            return "NCS S ${paddedGray}00-N"
+        }
+
+        val ncsHueString: String
+        val h = hue % 360f
+
+        when {
+            h >= 0f && h < 60f -> {
+                val percentageOfRed = (((60f - h) / 60f) * 100).toInt().coerceIn(0, 99)
+                ncsHueString = if (percentageOfRed == 0) "Y" else "Y${percentageOfRed}R"
+            }
+            h >= 240f && h <= 360f -> {
+                val percentageOfBlue = (((360f - h) / 120f) * 100).toInt().coerceIn(0, 99)
+                ncsHueString = if (percentageOfBlue == 0) "R" else "R${percentageOfBlue}B"
+            }
+            h >= 120f && h < 240f -> {
+                val percentageOfGreen = (((240f - h) / 120f) * 100).toInt().coerceIn(0, 99)
+                ncsHueString = if (percentageOfGreen == 0) "B" else "B${percentageOfGreen}G"
+            }
+            else -> {
+                val percentageOfYellow = (((h - 120f) / 60f) * 100).toInt().coerceIn(0, 99)
+                ncsHueString = if (percentageOfYellow == 0) "G" else "G${percentageOfYellow}Y"
+            }
+        }
+
+        val bPad = blackness.toString().padStart(2, '0')
+        val cPad = chromaticness.toString().padStart(2, '0')
+
+        return "NCS S $bPad$cPad-$ncsHueString"
+    }
+}
 
 data class ColorPalette(
     val name: String,
@@ -32,6 +78,8 @@ data class ColorPalette(
     val rgbStrings: MutableList<String> = mutableListOf()
     val hexStrings: MutableList<String> = mutableListOf()
     val cmyStrings: MutableList<String> = mutableListOf()
+    val ncsStrings: MutableList<String> = mutableListOf()
+
 
     fun Int.dpToPx(): Int {
         val density = Resources.getSystem().displayMetrics.density
@@ -189,6 +237,7 @@ data class ColorPalette(
         rgbStrings.clear()
         hexStrings.clear()
         cmyStrings.clear()
+        ncsStrings.clear()
         boxViews.forEachIndexed { index: Int, imageView: ImageView ->
             val hueShift = hueShifts[index]
             val satShift = satShifts[index]
@@ -215,11 +264,16 @@ data class ColorPalette(
             val hex = String.format("#%06X", (0xFFFFFF and colorInt))
             hexStrings.add(hex)
 
+
             // 5. Store CMY String
             val c = (1f - (r / 255f)) * 100
             val m = (1f - (g / 255f)) * 100
             val y = (1f - (b / 255f)) * 100
             cmyStrings.add("Cyan:${c.toInt()}% \nMagenta:${m.toInt()}% \nYellow:${y.toInt()}%")
+
+            // 6. Calculate and Store NCS String
+            val estimatedNcs = NcsApproximator.getEstimatedNcs(newHsv[0], newHsv[1], newHsv[2])
+            ncsStrings.add(estimatedNcs)
 
             if (index < textViews.size) {
 
@@ -228,6 +282,7 @@ data class ColorPalette(
                     "HEX" -> hexStrings[index]
                     "HSV" -> hsvStrings[index]
                     "CMY" -> cmyStrings[index]
+                    "NCS" -> ncsStrings[index]
                     else -> hsvStrings[index] // Default fallback
                 }
                 textViews[index].text = displayString
@@ -239,6 +294,7 @@ data class ColorPalette(
         rgbStrings.clear()
         hexStrings.clear()
         cmyStrings.clear()
+        ncsStrings.clear()
         boxViews.forEachIndexed { index: Int, imageView: ImageView ->
             val hueShift = hueShifts[index]
             val satShift = satShifts[index]
@@ -274,25 +330,28 @@ data class ColorPalette(
             val y = (1f - (b / 255f)) * 100
             cmyStrings.add("Cyan:${c.toInt()}% \nMagenta:${m.toInt()}% \nYellow:${y.toInt()}%")
 
+            // 6. Calculate and Store NCS String
+            val estimatedNcs = NcsApproximator.getEstimatedNcs(newHsv[0], newHsv[1], newHsv[2])
+            ncsStrings.add(estimatedNcs)
+
 
             if (index < textViews.size) {
                 val h = newHsv[0].toInt()
                 val s = (newHsv[1] * 100).toInt()
                 val v = (newHsv[2] * 100).toInt()
-
             }
+
             if (index < textViews.size) {
                 val displayString = when (mode) {
                     "RGB" -> rgbStrings[index]
                     "HEX" -> hexStrings[index]
                     "HSV" -> hsvStrings[index]
                     "CMY" -> cmyStrings[index]
+                    "NCS" -> ncsStrings[index]
                     else -> hsvStrings[index]
                 }
                 textViews[index].text = displayString
 
-                //textViewNames[index].text = displayString
-                //textViewsValues[index].text = displayString
             }
         }
     }

@@ -364,6 +364,7 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
             "HEX" -> radioGroup.check(R.id.radioHEX)
             "HSV" -> radioGroup.check(R.id.radioHSV)
             "CMY" -> radioGroup.check(R.id.radioCMY)
+            "NCS" -> radioGroup.check(R.id.radioNCS)
         }
 
         radioGroup.setOnCheckedChangeListener { group, checkedId ->
@@ -383,6 +384,10 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
                 R.id.radioCMY -> {
                     Log.d("Settings", "Selected format: CMY")
                     currentColorMode = "CMY"
+                }
+                R.id.radioNCS -> {
+                    Log.d("Settings", "Selected format: NCS")
+                    currentColorMode = "NCS"
                 }
             }
             val prefs = getSharedPreferences("AppSettings", MODE_PRIVATE)
