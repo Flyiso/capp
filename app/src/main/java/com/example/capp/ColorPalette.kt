@@ -116,7 +116,6 @@ object ColorMatches {
         val y = (1f - (android.graphics.Color.blue(colorInt) / 255f)) * 100
         return "Cyan:${c.toInt()}% \nMagenta:${m.toInt()}% \nYellow:${y.toInt()}%"
     }
-
     fun getNcsColor(baseHsv: FloatArray): MatchResult? {
         val estimated_ncs_color = getEstimatedNcsColor(baseHsv)
         val cleanNcs = if (estimated_ncs_color.startsWith("NCS S ")) estimated_ncs_color.substring(6) else estimated_ncs_color
@@ -137,47 +136,53 @@ object ColorMatches {
             val paddedGray = grayBlackness.toString().padStart(2, '0')
             return "NCS S ${paddedGray}00-N"
         }
+        val bPad = b.toString().padStart(2, '0')
         val ncsHueString: String
         val h = baseHsv[0] % 360f
+        val cPad = if (c < 5) "00" else c.toString().padStart(2, '0')
+
         when {
-            h >= 0f && h < 60f -> {
+            h >= 0f && h < 60f && cPad != "00" -> {
                 val percentageOfRed = String.format("%02d", (((60f - h) / 60f) * 100).toInt().coerceIn(0, 99))
-                ncsHueString = if (percentageOfRed == "00") "Y" else "Y${percentageOfRed}R"
+                ncsHueString = if (percentageOfRed == "00") "R" else "Y${percentageOfRed}R"
             }
-            h >= 240f && h <= 360f -> {
-                val percentageOfBlue = String.format("%02d", (((360f - h) / 120f) * 100).toInt().coerceIn(0, 99))
-                ncsHueString = if (percentageOfBlue == "00") "R" else "R${percentageOfBlue}B"
+            h >= 60f && h < 120f && cPad != "00" -> {
+                val percentageOfYellow = String.format("%02d", (((120f - h) / 120f) * 100).toInt().coerceIn(0, 99))
+                ncsHueString = if (percentageOfYellow == "00") "Y" else "G${percentageOfYellow}Y"
             }
-            h >= 120f && h < 240f -> {
-                val percentageOfGreen = String.format("%02d", (((240f - h) / 120f) * 100).toInt().coerceIn(0, 99))
-                ncsHueString = if (percentageOfGreen == "00") "B" else "B${percentageOfGreen}G"
+            h >= 120f && h < 240f && cPad != "00" -> {
+                val percentageOfGreen = String.format("%02d", (((240f - h) / 240f) * 100).toInt().coerceIn(0, 99))
+                ncsHueString = if (percentageOfGreen == "00") "G" else "B${percentageOfGreen}G"
+            }
+            h >= 240f && h <= 360f && cPad != "00" -> {
+                val percentageOfBlue = String.format("%02d", (((360f - h) / 360f) * 100).toInt().coerceIn(0, 99))
+                ncsHueString = if (percentageOfBlue == "00") "B" else "R${percentageOfBlue}B"
             }
             else -> {
-                val percentageOfYellow = String.format("%02d", (((h - 120f) / 60f) * 100).toInt().coerceIn(0, 99))
-                ncsHueString = if (percentageOfYellow == "00") "G" else "G${percentageOfYellow}Y"
+                ncsHueString = "N"
             }
         }
-        val bPad = b.toString().padStart(2, '0')
-        val cPad = c.toString().padStart(2, '0')
         return "NCS S $bPad$cPad-$ncsHueString"
     }
 
     fun matchToNcsCharts(matchColor: String): MatchResult? {
         val cleanColor = if (matchColor.startsWith("NCS S ")) matchColor.substring(6) else matchColor
-        if ( ColorMatches.colorDatabase.isEmpty() || cleanColor.length < 9) return null
+        if ( ColorMatches.colorDatabase.isEmpty() || cleanColor.length < 6) return null
         val targetB = cleanColor.substring(0, 2).toIntOrNull() ?: return null
         val targetC = cleanColor.substring(2, 4).toIntOrNull() ?: return null
         val targetHuePlacement = findCirclePlacement(cleanColor.substring(5))
         var bestFit = -1.0
         var finalColor: String? = null
 
-        for (ncs in  ColorMatches.colorDatabase) {
+        for (ncs in ColorMatches.colorDatabase) {
             val bDiff = abs(ncs.b - targetB)
             val cDiff = abs(ncs.c - targetC)
             val colorHue = findCirclePlacement(ncs.hue)
-            val hueDist = abs(colorHue - targetHuePlacement)
-            val hDiff = min((min(hueDist, 400 - hueDist) / 2.0), 100.0)
-            val matchScore = 100.0 - ((abs(bDiff) / 3.0) + (abs(cDiff) / 3.0) + (abs(hDiff) / 3.0))
+            val hueDist = min(abs(colorHue - targetHuePlacement), (400 - abs(colorHue - targetHuePlacement)))
+            //val hDiff = min((min(hueDist, 400 - hueDist) / 2.0), 100.0)
+            val hDiff = 100-(hueDist/4)
+
+            val matchScore = 100.0 - ((abs(bDiff) * 0.3) + (abs(cDiff) * 0.3) + (abs(hDiff) * 0.3))
 
             if (matchScore > bestFit) {
                 bestFit = matchScore
@@ -188,13 +193,12 @@ object ColorMatches {
             it, bestFit.roundToInt(),
             ncsToHsv(it), matchColor)}
     }
-
     private fun findCirclePlacement(hue: String): Int {
         if (hue.isEmpty()) return 0
-        val firstChar = hue[0]
+        val firstChar = hue[0].uppercaseChar()
         if (firstChar == 'N') return 1000
 
-        val segments = mapOf('Y' to 0, 'R' to 100, 'B' to 200)
+        val segments = mapOf('Y' to 0, 'R' to 100, 'B' to 200, 'G' to 300)
         var seg = segments[firstChar] ?: 300
 
         if (hue.length > 1) {
@@ -217,7 +221,7 @@ object ColorMatches {
         val v = (100f - b.toFloat()) / 100f
         val h = (huePlacement.toFloat() / 400f) * 360f
         return floatArrayOf(
-            h.coerceIn(0f, 360f),
+            360-(h.coerceIn(0f, 360f)),
             s.coerceIn(0f, 1f),
             v.coerceIn(0f, 1f)
         )
@@ -233,7 +237,6 @@ data class ColorPalette(
     val valShifts: List<Float>,
     val onExpandListener: (palette: ColorPalette, isExpanding: Boolean) -> Unit
 ) {
-
     private var isExpanded = false
     private val boxViews = mutableListOf<ImageView>()
     private val textViews = mutableListOf<TextView>()
@@ -407,7 +410,7 @@ data class ColorPalette(
                     "HEX" -> matchObj.hexColorStr
                     "HSV" -> matchObj.hsvColorStr
                     "CMY" -> matchObj.cmyColorStr
-                    "NCS" -> matchObj.ncsColorStr
+                    "NCS" -> "${matchObj.ncsColorStr}\n${matchObj.matchPercentageNcs}% Match. \n(${matchObj.ncsEstimationStr})"
                     else -> matchObj.hsvColorStr
                 }
                 textViews[index].text = displayString
