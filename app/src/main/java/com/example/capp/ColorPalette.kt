@@ -465,7 +465,7 @@ data class ColorPalette(
                     "HEX" -> matchObj.hexColorStr
                     "HSV" -> matchObj.hsvColorStr
                     "CMY" -> matchObj.cmyColorStr
-                    "NCS" -> "${matchObj.ncsColorStr}\n${matchObj.matchPercentageNcs}% Match.)"
+                    "NCS" -> "${matchObj.ncsColorStr}\n(${matchObj.matchPercentageNcs}% Match)"
                     else -> matchObj.hsvColorStr
                 }
                 textViews[index].text = displayString
