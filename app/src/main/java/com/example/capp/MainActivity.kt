@@ -28,8 +28,12 @@ import android.widget.LinearLayout
 import android.widget.PopupWindow
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import android.widget.RadioGroup
-
-
+// more new imports
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 // class MainActivity : androidx.activity.ComponentActivity()
@@ -71,6 +75,14 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // this is also new
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                NcsColorFit.initializeDatabase(applicationContext)
+            }
+        }
+        // end of this new section
 
         binding.scannerOverlay.setOnRectChangedListener(object : ScannerOverlay.OnRectChangedListener {
             override fun onRectChanged(rect: RectF) {
