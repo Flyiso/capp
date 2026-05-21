@@ -39,13 +39,15 @@ data class ColorMatch(
     val displayColorDefault: FloatArray,
     val displayColorNcs: FloatArray,
     val matchPercentageDefault: Int,
-    val matchPercentageNcs: Int
+    val matchPercentageNcs: Int,
+    val ncsEstimationStr: String
 )
 
 data class MatchResult(
     val colorCode: String,
     val matchPercentage: Int,
-    val matchHSV: FloatArray
+    val matchHSV: FloatArray,
+    val estimatedNcs: String
 )
 
 object ColorMatches {
@@ -79,7 +81,6 @@ object ColorMatches {
             e.printStackTrace()
         }
     }
-
     fun getColorObj(baseHsv: FloatArray): ColorMatch{
         val colorInt = android.graphics.Color.HSVToColor(baseHsv)
         val hex = getHexColor(colorInt)
@@ -92,7 +93,8 @@ object ColorMatches {
             rgb,hex,
             cmy, "NCS S ${ncs?.colorCode ?: ""}",
             baseHsv, ncs?.matchHSV ?: baseHsv,
-            100, ncs?.matchPercentage ?: 0
+            100, ncs?.matchPercentage ?: 0,
+            ncs?.estimatedNcs ?: "unknown"
         )
     }
 
@@ -122,7 +124,7 @@ object ColorMatches {
         if (result != null) {
             return result
         }
-        return MatchResult(cleanNcs,0, ncsToHsv(cleanNcs))
+        return MatchResult(cleanNcs,0, ncsToHsv(cleanNcs), cleanNcs)
     }
 
     fun getEstimatedNcsColor(baseHsv: FloatArray):String{
@@ -139,20 +141,20 @@ object ColorMatches {
         val h = baseHsv[0] % 360f
         when {
             h >= 0f && h < 60f -> {
-                val percentageOfRed = (((60f - h) / 60f) * 100).toInt().coerceIn(0, 99)
-                ncsHueString = if (percentageOfRed == 0) "Y" else "Y${percentageOfRed}R"
+                val percentageOfRed = String.format("%02d", (((60f - h) / 60f) * 100).toInt().coerceIn(0, 99))
+                ncsHueString = if (percentageOfRed == "00") "Y" else "Y${percentageOfRed}R"
             }
             h >= 240f && h <= 360f -> {
-                val percentageOfBlue = (((360f - h) / 120f) * 100).toInt().coerceIn(0, 99)
-                ncsHueString = if (percentageOfBlue == 0) "R" else "R${percentageOfBlue}B"
+                val percentageOfBlue = String.format("%02d", (((360f - h) / 120f) * 100).toInt().coerceIn(0, 99))
+                ncsHueString = if (percentageOfBlue == "00") "R" else "R${percentageOfBlue}B"
             }
             h >= 120f && h < 240f -> {
-                val percentageOfGreen = (((240f - h) / 120f) * 100).toInt().coerceIn(0, 99)
-                ncsHueString = if (percentageOfGreen == 0) "B" else "B${percentageOfGreen}G"
+                val percentageOfGreen = String.format("%02d", (((240f - h) / 120f) * 100).toInt().coerceIn(0, 99))
+                ncsHueString = if (percentageOfGreen == "00") "B" else "B${percentageOfGreen}G"
             }
             else -> {
-                val percentageOfYellow = (((h - 120f) / 60f) * 100).toInt().coerceIn(0, 99)
-                ncsHueString = if (percentageOfYellow == 0) "G" else "G${percentageOfYellow}Y"
+                val percentageOfYellow = String.format("%02d", (((h - 120f) / 60f) * 100).toInt().coerceIn(0, 99))
+                ncsHueString = if (percentageOfYellow == "00") "G" else "G${percentageOfYellow}Y"
             }
         }
         val bPad = b.toString().padStart(2, '0')
@@ -182,7 +184,9 @@ object ColorMatches {
                 finalColor = ncs.fullCode
             }
         }
-        return finalColor?.let { MatchResult(it, bestFit.roundToInt(), ncsToHsv(it)) }
+        return finalColor?.let { MatchResult(
+            it, bestFit.roundToInt(),
+            ncsToHsv(it), matchColor)}
     }
 
     private fun findCirclePlacement(hue: String): Int {
@@ -217,157 +221,6 @@ object ColorMatches {
             s.coerceIn(0f, 1f),
             v.coerceIn(0f, 1f)
         )
-    }
-}
-object NcsColorFit {
-
-    private var colorDatabase: List<NcsColor> = emptyList()
-
-    fun initializeDatabase(context: Context, fileName: String = "colors.txt") {
-        if (colorDatabase.isNotEmpty()) return
-
-        val parsedDatabase = mutableListOf<NcsColor>()
-        try {
-            context.assets.open(fileName).bufferedReader().useLines { lines ->
-                for (line in lines) {
-                    val trimmed = line.trim()
-                    if (trimmed.isEmpty() || trimmed.length < 7) continue
-
-                    val color = trimmed.substring(6)
-                    try {
-                        val parts = color.split("-")
-                        if (parts.size < 2) continue
-
-                        val tint = parts[0]
-                        val hue = parts[1]
-
-                        val b = tint.substring(0, 2).toInt()
-                        val c = tint.substring(2).toInt()
-
-                        parsedDatabase.add(NcsColor(color, b, c, hue))
-                    } catch (e: Exception) {
-                        continue
-                    }
-                }
-            }
-            colorDatabase = parsedDatabase
-        } catch (e: IOException) {
-            e.printStackTrace()
-        }
-    }
-
-    fun findBestNcs(matchColor: String): MatchResult? {
-        val cleanColor = if (matchColor.startsWith("NCS S ")) matchColor.substring(6) else matchColor
-        if (colorDatabase.isEmpty() || cleanColor.length < 9) return null
-
-        val targetB = cleanColor.substring(0, 2).toIntOrNull() ?: return null
-        val targetC = cleanColor.substring(2, 4).toIntOrNull() ?: return null
-        val targetHuePlacement = findCirclePlacement(cleanColor.substring(5))
-
-        var bestFit = -1.0
-        var finalColor: String? = null
-
-        for (ncs in colorDatabase) {
-            val bDiff = abs(ncs.b - targetB)
-            val cDiff = abs(ncs.c - targetC)
-
-            val colorHue = findCirclePlacement(ncs.hue)
-            val hueDist = abs(colorHue - targetHuePlacement)
-
-            val hDiff = min((min(hueDist, 400 - hueDist) / 2.0), 100.0)
-            val matchScore = 100.0 - ((abs(bDiff) / 3.0) + (abs(cDiff) / 3.0) + (abs(hDiff) / 3.0))
-
-            if (matchScore > bestFit) {
-                bestFit = matchScore
-                finalColor = ncs.fullCode
-            }
-        }
-        return finalColor?.let { MatchResult(it, bestFit.roundToInt(), ncsToHsv(it)) }
-    }
-
-    fun findCirclePlacement(hue: String): Int {
-        if (hue.isEmpty()) return 0
-        val firstChar = hue[0]
-        if (firstChar == 'N') return 1000
-
-        val segments = mapOf('Y' to 0, 'R' to 100, 'B' to 200)
-        var seg = segments[firstChar] ?: 300
-
-        if (hue.length > 1) {
-            val endIdx = min(3, hue.length)
-            val digits = hue.substring(1, endIdx).toIntOrNull()
-            if (digits != null) {
-                seg += digits
-            }
-        }
-        return seg
-    }
-
-    fun ncsToHsv(nscColor:String): FloatArray {
-        if (nscColor.length < 4) return floatArrayOf(0f, 0f, 0f)
-        val b = nscColor.substring(0, 2).toIntOrNull() ?: 0
-        val c = nscColor.substring(2, 4).toIntOrNull() ?: 0
-        val huePart = if (nscColor.length > 5) nscColor.substring(5) else "N"
-        val huePlacement = findCirclePlacement(huePart)
-
-        val s = if (b + c == 100) 1.0f else c.toFloat() / (100f - b.toFloat())
-        val v = (100f - b.toFloat()) / 100f
-
-        val h = (huePlacement.toFloat() / 400f) * 360f
-
-        return floatArrayOf(
-            h.coerceIn(0f, 360f),
-            s.coerceIn(0f, 1f),
-            v.coerceIn(0f, 1f)
-        )
-    }
-}
-object NcsApproximator {
-    fun getEstimatedNcs(hue: Float, saturation: Float, value: Float): MatchResult? {
-        val baseBlackness = (1f - value) * 100f
-        val blackness = baseBlackness.toInt().coerceIn(0, 99)
-
-        val baseChromaticness = saturation * value * 100f
-        val chromaticness = baseChromaticness.toInt().coerceIn(0, 99)
-
-        if (saturation < 0.06f) {
-            val grayBlackness = ((1f - value) * 100).toInt().coerceIn(0, 99)
-            val paddedGray = grayBlackness.toString().padStart(2, '0')
-            val result = NcsColorFit.findBestNcs("NCS S ${paddedGray}00-N")
-            return result
-        }
-
-        val ncsHueString: String
-        val h = hue % 360f
-
-        when {
-            h >= 0f && h < 60f -> {
-                val percentageOfRed = (((60f - h) / 60f) * 100).toInt().coerceIn(0, 99)
-                ncsHueString = if (percentageOfRed == 0) "Y" else "Y${percentageOfRed}R"
-            }
-            h >= 240f && h <= 360f -> {
-                val percentageOfBlue = (((360f - h) / 120f) * 100).toInt().coerceIn(0, 99)
-                ncsHueString = if (percentageOfBlue == 0) "R" else "R${percentageOfBlue}B"
-            }
-            h >= 120f && h < 240f -> {
-                val percentageOfGreen = (((240f - h) / 120f) * 100).toInt().coerceIn(0, 99)
-                ncsHueString = if (percentageOfGreen == 0) "B" else "B${percentageOfGreen}G"
-            }
-            else -> {
-                val percentageOfYellow = (((h - 120f) / 60f) * 100).toInt().coerceIn(0, 99)
-                ncsHueString = if (percentageOfYellow == 0) "G" else "G${percentageOfYellow}Y"
-            }
-        }
-
-        val bPad = blackness.toString().padStart(2, '0')
-        val cPad = chromaticness.toString().padStart(2, '0')
-
-        val result = NcsColorFit.findBestNcs("NCS S $bPad$cPad-$ncsHueString")
-        if (result != null) {
-            return result
-        }
-        val cleanNcs = "$bPad$cPad-$ncsHueString"
-        return MatchResult(cleanNcs, 0, NcsColorFit.ncsToHsv(cleanNcs))
     }
 }
 
@@ -590,7 +443,7 @@ data class ColorPalette(
                     "HEX" -> matchObj.hexColorStr
                     "HSV" -> matchObj.hsvColorStr
                     "CMY" -> matchObj.cmyColorStr
-                    "NCS" -> matchObj.ncsColorStr
+                    "NCS" -> "${matchObj.ncsColorStr}\n${matchObj.matchPercentageNcs}% Match. \n(${matchObj.ncsEstimationStr})"
                     else -> matchObj.rgbColorStr
                 }
                 textViews[index].text = displayString

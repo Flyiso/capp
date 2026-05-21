@@ -79,7 +79,7 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
         // this is also new
         lifecycleScope.launch {
             withContext(Dispatchers.IO) {
-                NcsColorFit.initializeDatabase(applicationContext)
+                ColorMatches.initializeDatabase(applicationContext)
             }
         }
         // end of this new section
