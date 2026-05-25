@@ -24,12 +24,16 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.WindowManager
+import android.view.animation.Animation
+import android.view.animation.AnimationUtils
 import android.widget.LinearLayout
 import android.widget.PopupWindow
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import android.widget.RadioGroup
+import android.widget.Toast
 // more new imports
 import androidx.appcompat.app.AppCompatActivity
+
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -45,10 +49,43 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
 
     private lateinit var cameraExecutor: ExecutorService
     private var isCameraFrozen = false
+    private var clicked = false
     private var currentColorMode = "HSV"
     private var currentCameraMode = "BACK"
     private var lastSetColor = floatArrayOf(0f, 1f, 1f)
 
+    private val rotateOpen: Animation by lazy {AnimationUtils.loadAnimation(this, R.anim.rotate_open_anim)}
+    private val rotateClose: Animation by lazy {AnimationUtils.loadAnimation(this, R.anim.roatate_close_anim)}
+    private val fromTop: Animation by lazy {AnimationUtils.loadAnimation(this, R.anim.from_top_anim)}
+    private val toTop: Animation by lazy {AnimationUtils.loadAnimation(this, R.anim.to_top_anim)}
+
+
+
+    private fun setVisibility(clicked: Boolean){
+        if(!clicked){
+            binding.fabSettings.visibility=View.VISIBLE
+            binding.copyBtn.visibility=View.VISIBLE
+        } else {
+            binding.fabSettings.visibility=View.INVISIBLE
+            binding.copyBtn.visibility=View.INVISIBLE
+        }
+    }
+    private fun setAnimation(clicked: Boolean){
+        if(!clicked){
+            binding.fabSettings.startAnimation(fromTop)
+            binding.copyBtn.startAnimation(fromTop)
+            binding.optionsBtn.startAnimation(rotateOpen)
+        } else {
+            binding.fabSettings.startAnimation(toTop)
+            binding.copyBtn.startAnimation(toTop)
+            binding.optionsBtn.startAnimation(rotateClose)
+        }
+    }
+    private fun onOptionsBtnClicked(){
+        setVisibility(clicked)
+        setAnimation(clicked)
+        clicked = !clicked
+    }
     private fun getAverageHsv(bitmap: Bitmap): FloatArray {
         val tinyBitmap = Bitmap.createScaledBitmap(bitmap, 1, 1, true)
         val averageColor = tinyBitmap.getPixel(0, 0)
@@ -75,6 +112,15 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        binding.optionsBtn.setOnClickListener{
+            onOptionsBtnClicked()
+        }
+        binding.fabSettings.setOnClickListener{
+            Toast.makeText(this, "Open Settings", Toast.LENGTH_SHORT).show()
+        }
+        binding.copyBtn.setOnClickListener{
+            Toast.makeText(this, "Colors Copied to clipboard!", Toast.LENGTH_SHORT).show()
+        }
 
         // this is also new
         lifecycleScope.launch {
