@@ -32,10 +32,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             app:implementationMode="compatible"
-            app:scaleType="fitStart">
-
-
-        </androidx.camera.view.PreviewView>
+            app:scaleType="fitStart"/>
         <ImageView
             android:id="@+id/frozenOverlay"
             android:layout_width="match_parent"
