@@ -2,6 +2,9 @@
 package com.example.capp
 
 import android.annotation.SuppressLint
+import android.content.ClipboardManager
+import android.content.ClipData
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -61,8 +64,6 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
     private var currentCameraMode = "BACK"
     private var lastSetColor = floatArrayOf(0f, 1f, 1f)
 
-    private val rotateOpen: Animation by lazy {AnimationUtils.loadAnimation(this, R.anim.rotate_open_anim)}
-    private val rotateClose: Animation by lazy {AnimationUtils.loadAnimation(this, R.anim.roatate_close_anim)}
     private val fromTop: Animation by lazy {AnimationUtils.loadAnimation(this, R.anim.from_top_anim)}
     private val toTop: Animation by lazy {AnimationUtils.loadAnimation(this, R.anim.to_top_anim)}
 
@@ -75,7 +76,7 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
         var startY = 0f
         var isDragging = false
 
-        val touchSlop = android.view.ViewConfiguration.get(optBtn.context).scaledTouchSlop
+        val touchSlop = ViewConfiguration.get(optBtn.context).scaledTouchSlop
 
         optBtn.setOnClickListener {
             onOptionsBtnClicked()
@@ -170,8 +171,6 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
         } else {
             binding.fabSettings.startAnimation(toTop)
             binding.copyBtn.startAnimation(toTop)
-
-            // FIX 2: Modern Property Animation instead of startAnimation(rotateClose)
             binding.optionsBtn.animate().rotation(0f).setDuration(200).start()
         }
     }
@@ -198,6 +197,20 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
         tinyBitmap.recycle()
         return hsv
     }
+
+    private fun addColorsToClipboard() {
+        val colorClipboardContent = StringBuilder()
+        colorClipboardContent.append("Color profile: ${currentColorMode}")
+        palettes.forEach { palette ->
+            colorClipboardContent.append("\n${palette.returnCurrentColors(currentColorMode)}")
+        }
+        colorClipboardContent.toString()
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip: ClipData = ClipData.newPlainText("copied colrs", colorClipboardContent)
+        clipboard.setPrimaryClip(clip)
+        Toast.makeText( this, "$currentColorMode colors copied to clipboard!", Toast.LENGTH_SHORT).show()
+    }
+
     val onExpandCallback = { clickedPalette: ColorPalette, isExpanding: Boolean ->
         isCameraFrozen = isExpanding
         if (isExpanding) {
@@ -287,7 +300,7 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
             showSettingsPopup()
         }
         binding.copyBtn.setOnClickListener{
-            Toast.makeText(this, "Colors (would have been) Copied to clipboard! (if ive added that function.)  (I have not)", Toast.LENGTH_SHORT).show()
+            addColorsToClipboard()
         }
 
         if (allPermissionsGranted()) {
@@ -365,7 +378,6 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
                 imageProxy.close()
             }
 
-            //val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
             val cameraSelector = if (currentCameraMode == "FRONT") {
                 CameraSelector.DEFAULT_FRONT_CAMERA
             } else {
@@ -421,23 +433,19 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
     private var debugImageView: ImageView? = null
 
     private fun showDebugCrop(bitmap: Bitmap) {
-        // This forces the following code to execute on the UI thread
         runOnUiThread {
             try {
                 if (debugImageView == null) {
                     debugImageView = ImageView(this).apply {
-                        // Define size and position
                         layoutParams = ViewGroup.MarginLayoutParams(300, 300).apply {
-                            topMargin = 200 // Pushed down so it's not under the status bar
+                            topMargin = 200
                             marginStart = 50
                         }
 
-                        // Visual styling for the debug window
                         setBackgroundColor(android.graphics.Color.RED)
                         setPadding(8, 8, 8, 8)
                         scaleType = ImageView.ScaleType.FIT_CENTER
 
-                        // Add it to the activity's root layout
                         (binding.root as? ViewGroup)?.addView(this)
                     }
                 }
@@ -450,8 +458,6 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
             }
         }
     }
-
-    // new below here
 
     private fun showSettingsPopup() {
 

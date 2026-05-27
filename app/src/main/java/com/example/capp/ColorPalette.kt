@@ -508,4 +508,25 @@ data class ColorPalette(
             }
         }
     }
+
+    fun returnCurrentColors(mode: String): String{
+        val paletteStr = StringBuilder()
+        paletteStr.append("${name}:")
+        boxViews.forEachIndexed { index: Int, imageView: ImageView ->
+            val matchObj = colorObjects[index]
+            if (index < textViews.size) {
+                val colorStr = when (mode) {
+                    "RGB" -> matchObj.rgbColorStr
+                    "HEX" -> matchObj.hexColorStr
+                    "HSV" -> matchObj.hsvColorStr
+                    "CMY" -> matchObj.cmyColorStr
+                    "NCS" -> "${matchObj.ncsColorStr}\n(${matchObj.matchPercentageNcs}% Match)"
+                    else -> matchObj.hsvColorStr
+                }
+                paletteStr.append(" ").append(colorStr).append(",")
+            }
+        }
+        paletteStr.append("\n")
+        return paletteStr.toString()
+    }
 }
