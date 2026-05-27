@@ -12,47 +12,45 @@
         android:id="@+id/optionsBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="300dp"
-        android:layout_marginEnd="5dp"
         android:clickable="true"
         android:focusable="true"
-        android:tint="@android:color/white"
-        app:elevation="6dp"
         app:fabCustomSize="60dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@android:drawable/ic_menu_add" />
+        app:maxImageSize="59dp"
+        android:src="@android:drawable/ic_menu_add"
+        android:tint="@android:color/white"
+        android:adjustViewBounds="false"
+        android:elevation="100dp"
+        />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabSettings"
+        android:visibility="invisible"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:adjustViewBounds="false"
-        android:alpha="0.5"
-        android:src="@drawable/gear"
-        android:visibility="invisible"
-        app:backgroundTint="@color/blur_gray"
-        app:borderWidth="0dp"
-        app:ensureMinTouchTargetSize="false"
-        app:fabCustomSize="60dp"
         app:layout_constraintStart_toStartOf="@id/optionsBtn"
         app:layout_constraintTop_toBottomOf="@id/optionsBtn"
+        app:borderWidth="0dp"
+        app:fabCustomSize="60dp"
         app:maxImageSize="59dp"
-        app:pressedTranslationZ="0dp"
+        android:src="@drawable/gear"
+        app:backgroundTint="@color/blur_gray"
         app:tint="@android:color/white"
-        tools:layout_editor_absoluteY="65dp" />
+        android:alpha="0.5"/>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/copyBtn"
+        android:visibility="invisible"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:clickable="true"
-        android:visibility="invisible"
-        app:fabCustomSize="60dp"
         app:layout_constraintStart_toStartOf="@id/fabSettings"
         app:layout_constraintTop_toBottomOf="@id/fabSettings"
-        app:srcCompat="@drawable/copyicon"
-        tools:layout_editor_absoluteY="125dp" />
+        app:borderWidth="0dp"
+        app:fabCustomSize="60dp"
+        app:maxImageSize="59dp"
+        android:src="@drawable/copyicon"
+        app:backgroundTint="@color/blur_gray"
+        app:tint="@android:color/white"
+        android:clickable="true" />
 
 
     <eightbitlab.com.blurview.BlurTarget
@@ -111,7 +109,7 @@
             android:layout_height="match_parent"
             android:gravity="center"
             android:orientation="vertical"
-            android:padding="2dp"></LinearLayout>
+            android:padding="2dp"/>
     </eightbitlab.com.blurview.BlurView>
 
     <!-- analog palette -->
@@ -185,7 +183,7 @@
             android:layout_height="match_parent"
             android:gravity="center"
             android:orientation="vertical"
-            android:padding="2dp"></LinearLayout>
+            android:padding="2dp"/>
     </eightbitlab.com.blurview.BlurView>
 
     <!-- Square -->
@@ -208,7 +206,7 @@
             android:layout_height="match_parent"
             android:gravity="center"
             android:orientation="vertical"
-            android:padding="2dp"></LinearLayout>
+            android:padding="2dp"/>
     </eightbitlab.com.blurview.BlurView>
 
 
@@ -234,7 +232,7 @@
             android:foregroundTintMode="multiply"
             android:gravity="center"
             android:orientation="vertical"
-            android:padding="2dp"></LinearLayout>
+            android:padding="2dp"/>
     </eightbitlab.com.blurview.BlurView>
 
 
@@ -259,7 +257,7 @@
             android:background="#04FFFFFF"
             android:gravity="center"
             android:orientation="vertical"
-            android:padding="1dp"></LinearLayout>
+            android:padding="1dp"/>
     </eightbitlab.com.blurview.BlurView>
 
 

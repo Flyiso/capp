@@ -1,6 +1,7 @@
 
 package com.example.capp
 
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -33,11 +34,15 @@ import android.widget.RadioGroup
 import android.widget.Toast
 // more new imports
 import androidx.appcompat.app.AppCompatActivity
+//import androidx.compose.ui.platform.ViewConfiguration
+import android.view.ViewConfiguration
+import androidx.constraintlayout.widget.ConstraintLayout
 
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 
 
 // class MainActivity : androidx.activity.ComponentActivity()
@@ -50,6 +55,8 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
     private lateinit var cameraExecutor: ExecutorService
     private var isCameraFrozen = false
     private var clicked = false
+    private var optBtnTop = false
+    private var optBtnLeft = false
     private var currentColorMode = "HSV"
     private var currentCameraMode = "BACK"
     private var lastSetColor = floatArrayOf(0f, 1f, 1f)
@@ -60,8 +67,116 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
     private val toTop: Animation by lazy {AnimationUtils.loadAnimation(this, R.anim.to_top_anim)}
 
 
+    private fun setupDraggableButton() {
+        val optBtn = binding.optionsBtn
+        var dX = 0f
+        var dY = 0f
+        var startX = 0f
+        var startY = 0f
+        var isDragging = false
 
-    private fun setVisibility(clicked: Boolean){
+        val touchSlop = android.view.ViewConfiguration.get(optBtn.context).scaledTouchSlop
+
+        optBtn.setOnClickListener {
+            onOptionsBtnClicked()
+        }
+
+        optBtn.setOnTouchListener { view, event ->
+            val parent = view.parent as View
+            val parentWidth = parent.width
+            val parentHeight = parent.height
+
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    dX = view.x - event.rawX
+                    dY = view.y - event.rawY
+                    startX = event.rawX
+                    startY = event.rawY
+                    isDragging = false
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val newX = (event.rawX + dX).coerceIn(0f, (parentWidth - view.width).toFloat())
+                    val newY = (event.rawY + dY).coerceIn(0f, (parentHeight - view.height).toFloat())
+                    view.x = newX
+                    view.y = newY
+
+                    if (!isDragging && (abs(event.rawX - startX) > touchSlop || abs(event.rawY - startY) > touchSlop)) {
+                        isDragging = true
+                    }
+                }
+                MotionEvent.ACTION_UP -> {
+                    if (!isDragging) {
+                        view.performClick()
+                    } else {
+                        val middleW = parentWidth / 2
+                        val middleH = parentHeight / 2
+                        val isLeft = view.x + (view.width / 2) < middleW
+
+                        val nearestX = if (isLeft) 0f else (parentWidth - view.width).toFloat()
+
+                        optBtnLeft = isLeft
+                        optBtnTop = view.y + (view.height / 2) < middleH
+
+                        view.animate()
+                            .x(nearestX)
+                            .setDuration(200)
+                            .withEndAction {
+                                val params = view.layoutParams as? ConstraintLayout.LayoutParams
+                                if (params != null) {
+                                    params.leftToLeft = ConstraintLayout.LayoutParams.UNSET
+                                    params.leftToRight = ConstraintLayout.LayoutParams.UNSET
+                                    params.rightToLeft = ConstraintLayout.LayoutParams.UNSET
+                                    params.rightToRight = ConstraintLayout.LayoutParams.UNSET
+                                    params.startToStart = ConstraintLayout.LayoutParams.UNSET
+                                    params.startToEnd = ConstraintLayout.LayoutParams.UNSET
+                                    params.endToStart = ConstraintLayout.LayoutParams.UNSET
+                                    params.endToEnd = ConstraintLayout.LayoutParams.UNSET
+
+                                    params.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+                                    params.topToBottom = ConstraintLayout.LayoutParams.UNSET
+                                    params.bottomToTop = ConstraintLayout.LayoutParams.UNSET
+                                    params.bottomToBottom = ConstraintLayout.LayoutParams.UNSET
+
+                                    params.topMargin = view.y.toInt()
+
+                                    if (isLeft) {
+                                        params.leftToLeft = ConstraintLayout.LayoutParams.PARENT_ID
+                                        params.leftMargin = 0
+                                    } else {
+                                        params.rightToRight = ConstraintLayout.LayoutParams.PARENT_ID
+                                        params.rightMargin = 0
+                                    }
+
+                                    view.translationX = 0f
+                                    view.translationY = 0f
+
+                                    view.layoutParams = params
+                                }
+                            }
+                            .start()
+                    }
+                }
+            }
+            true
+        }
+    }
+
+    private fun setAnimation(clicked: Boolean, optBtnTop: Boolean, optBtnLeft: Boolean){
+        if(!clicked){
+            binding.fabSettings.startAnimation(fromTop)
+            binding.copyBtn.startAnimation(fromTop)
+
+            binding.optionsBtn.animate().rotation(135f).setDuration(200).start()
+        } else {
+            binding.fabSettings.startAnimation(toTop)
+            binding.copyBtn.startAnimation(toTop)
+
+            // FIX 2: Modern Property Animation instead of startAnimation(rotateClose)
+            binding.optionsBtn.animate().rotation(0f).setDuration(200).start()
+        }
+    }
+
+    private fun setVisibility(clicked: Boolean, optBtnTop: Boolean, optBtnLeft: Boolean){
         if(!clicked){
             binding.fabSettings.visibility=View.VISIBLE
             binding.copyBtn.visibility=View.VISIBLE
@@ -70,20 +185,9 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
             binding.copyBtn.visibility=View.INVISIBLE
         }
     }
-    private fun setAnimation(clicked: Boolean){
-        if(!clicked){
-            binding.fabSettings.startAnimation(fromTop)
-            binding.copyBtn.startAnimation(fromTop)
-            binding.optionsBtn.startAnimation(rotateOpen)
-        } else {
-            binding.fabSettings.startAnimation(toTop)
-            binding.copyBtn.startAnimation(toTop)
-            binding.optionsBtn.startAnimation(rotateClose)
-        }
-    }
     private fun onOptionsBtnClicked(){
-        setVisibility(clicked)
-        setAnimation(clicked)
+        setVisibility(clicked, optBtnTop, optBtnLeft)
+        setAnimation(clicked, optBtnTop, optBtnLeft)
         clicked = !clicked
     }
     private fun getAverageHsv(bitmap: Bitmap): FloatArray {
@@ -112,15 +216,7 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        binding.optionsBtn.setOnClickListener{
-            onOptionsBtnClicked()
-        }
-        binding.fabSettings.setOnClickListener{
-            Toast.makeText(this, "Open Settings", Toast.LENGTH_SHORT).show()
-        }
-        binding.copyBtn.setOnClickListener{
-            Toast.makeText(this, "Colors Copied to clipboard!", Toast.LENGTH_SHORT).show()
-        }
+
 
         // this is also new
         lifecycleScope.launch {
@@ -184,7 +280,15 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
         }
 
         cameraExecutor = Executors.newSingleThreadExecutor()
-        setupDraggableFab()  // new
+
+        setupDraggableButton()
+
+        binding.fabSettings.setOnClickListener{
+            showSettingsPopup()
+        }
+        binding.copyBtn.setOnClickListener{
+            Toast.makeText(this, "Colors (would have been) Copied to clipboard! (if ive added that function.)  (I have not)", Toast.LENGTH_SHORT).show()
+        }
 
         if (allPermissionsGranted()) {
             startCamera()
@@ -348,60 +452,6 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
     }
 
     // new below here
-    private fun setupDraggableFab() {
-        val fab = binding.fabSettings
-        var dX = 0f
-        var dY = 0f
-        var lastAction = 0
-
-        // 1. Standard click listener for Accessibility and Taps
-        fab.setOnClickListener {
-            showSettingsPopup()
-        }
-
-        // 2. Touch listener for Dragging logic
-        fab.setOnTouchListener { view, event ->
-            val screenWidth = resources.displayMetrics.widthPixels
-            val screenHeight = resources.displayMetrics.heightPixels
-
-            when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> {
-                    dX = view.x - event.rawX
-                    dY = view.y - event.rawY
-                    lastAction = MotionEvent.ACTION_DOWN
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    var newX = event.rawX + dX
-                    var newY = event.rawY + dY
-
-                    newX = newX.coerceIn(0f, (screenWidth - view.width).toFloat())
-                    newY = newY.coerceIn(0f, (screenHeight - view.height).toFloat())
-
-                    view.x = newX
-                    view.y = newY
-
-                    // If the finger moves significantly, mark it as a MOVE
-                    if (Math.abs(event.rawX + dX - view.x) > 5 || Math.abs(event.rawY + dY - view.y) > 5) {
-                        lastAction = MotionEvent.ACTION_MOVE
-                    }
-                }
-                MotionEvent.ACTION_UP -> {
-                    if (lastAction == MotionEvent.ACTION_DOWN) {
-                        // This triggers the setOnClickListener defined above
-                        view.performClick()
-                    } else {
-                        // Snap to edge
-                        val middle = screenWidth / 2
-                        val nearestX = if (view.x + (view.width / 2) < middle) 0f
-                        else (screenWidth - view.width).toFloat()
-
-                        view.animate().x(nearestX).setDuration(200).start()
-                    }
-                }
-            }
-            true
-        }
-    }
 
     private fun showSettingsPopup() {
 
@@ -416,7 +466,6 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
 
         val radioGroup = popupView.findViewById<RadioGroup>(R.id.radioGroupFormat)
 
-        // --- ADD THIS PART TO REMEMBER THE CHOICE WHILE THE APP IS RUNNING ---
         when (currentColorMode) {
             "RGB" -> radioGroup.check(R.id.radioRGB)
             "HEX" -> radioGroup.check(R.id.radioHEX)
@@ -457,7 +506,6 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
         }
         val radioGroupCamera = popupView.findViewById<RadioGroup>(R.id.radioGroupCamera)
 
-        // Sync UI to current camera state
         when (currentCameraMode) {
             "BACK" -> radioGroupCamera.check(R.id.radioBACK)
             "FRONT" -> radioGroupCamera.check(R.id.radioFRONT)
