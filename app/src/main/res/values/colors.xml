@@ -11,5 +11,7 @@
     <color name="blur_gray">#12121277</color>
     <color name="gray">#ED333232</color>
     <color name="soft_gray">#FFEEEEEE</color>
+    <color name="button_first">#567468</color>
+    <color name="button_second">#745662</color>
 
 </resources>

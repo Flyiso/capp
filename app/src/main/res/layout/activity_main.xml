@@ -18,9 +18,9 @@
         app:maxImageSize="59dp"
         android:src="@android:drawable/ic_menu_add"
         android:tint="@android:color/white"
+        app:backgroundTint="@color/button_first"
         android:adjustViewBounds="false"
-        android:elevation="100dp"
-        />
+        android:elevation="100dp"/>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabSettings"
@@ -29,28 +29,28 @@
         android:layout_height="wrap_content"
         app:layout_constraintStart_toStartOf="@id/optionsBtn"
         app:layout_constraintTop_toBottomOf="@id/optionsBtn"
-        app:borderWidth="0dp"
+        app:borderWidth="5dp"
         app:fabCustomSize="60dp"
-        app:maxImageSize="59dp"
-        android:src="@drawable/gear"
-        app:backgroundTint="@color/blur_gray"
-        app:tint="@android:color/white"
-        android:alpha="0.5"/>
+        app:maxImageSize="58dp"
+        android:src="@drawable/settings_icon"
+        app:backgroundTint="@color/button_second"
+        app:tint="@android:color/white"/>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/copyBtn"
-        android:visibility="invisible"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:clickable="true"
+        android:src="@drawable/copy_icon"
+        android:visibility="invisible"
+        app:borderWidth="5dp"
+        app:fabCustomSize="60dp"
         app:layout_constraintStart_toStartOf="@id/fabSettings"
         app:layout_constraintTop_toBottomOf="@id/fabSettings"
-        app:borderWidth="0dp"
-        app:fabCustomSize="60dp"
-        app:maxImageSize="59dp"
-        android:src="@drawable/copyicon"
-        app:backgroundTint="@color/blur_gray"
+        app:maxImageSize="58dp"
         app:tint="@android:color/white"
-        android:clickable="true" />
+        app:backgroundTint="@color/button_second"
+        tools:visibility="invisible" />
 
 
     <eightbitlab.com.blurview.BlurTarget

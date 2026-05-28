@@ -66,15 +66,25 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
 
     private val fromTop: Animation by lazy {AnimationUtils.loadAnimation(this, R.anim.from_top_anim)}
     private val toTop: Animation by lazy {AnimationUtils.loadAnimation(this, R.anim.to_top_anim)}
+    private val fromBottom: Animation by lazy {AnimationUtils.loadAnimation(this, R.anim.from_bottom_anim)}
+    private val toBottom: Animation by lazy {AnimationUtils.loadAnimation(this, R.anim.to_bottom_anim)}
+
 
 
     private fun setupDraggableButton() {
         val optBtn = binding.optionsBtn
+        val subBtn1 = binding.fabSettings
+        val subBtn2 = binding.copyBtn
         var dX = 0f
         var dY = 0f
         var startX = 0f
         var startY = 0f
         var isDragging = false
+
+        var sub1OffsetX = 0f
+        var sub1OffsetY = 0f
+        var sub2OffsetX = 0f
+        var sub2OffsetY = 0f
 
         val touchSlop = ViewConfiguration.get(optBtn.context).scaledTouchSlop
 
@@ -94,12 +104,31 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
                     startX = event.rawX
                     startY = event.rawY
                     isDragging = false
+
+                    if (subBtn1.visibility == View.VISIBLE) {
+                        sub1OffsetX = subBtn1.x - view.x
+                        sub1OffsetY = subBtn1.y - view.y
+                    }
+                    if (subBtn2.visibility == View.VISIBLE) {
+                        sub2OffsetX = subBtn2.x - view.x
+                        sub2OffsetY = subBtn2.y - view.y
+                    }
                 }
+
                 MotionEvent.ACTION_MOVE -> {
                     val newX = (event.rawX + dX).coerceIn(0f, (parentWidth - view.width).toFloat())
                     val newY = (event.rawY + dY).coerceIn(0f, (parentHeight - view.height).toFloat())
                     view.x = newX
                     view.y = newY
+
+                    if (subBtn1.visibility == View.VISIBLE) {
+                        subBtn1.x = newX + sub1OffsetX
+                        subBtn1.y = newY + sub1OffsetY
+                    }
+                    if (subBtn2.visibility == View.VISIBLE) {
+                        subBtn2.x = newX + sub2OffsetX
+                        subBtn2.y = newY + sub2OffsetY
+                    }
 
                     if (!isDragging && (abs(event.rawX - startX) > touchSlop || abs(event.rawY - startY) > touchSlop)) {
                         isDragging = true
@@ -114,9 +143,17 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
                         val isLeft = view.x + (view.width / 2) < middleW
 
                         val nearestX = if (isLeft) 0f else (parentWidth - view.width).toFloat()
+                        val deltaX = nearestX - view.x
 
                         optBtnLeft = isLeft
                         optBtnTop = view.y + (view.height / 2) < middleH
+
+                        if (subBtn1.visibility == View.VISIBLE) {
+                            subBtn1.animate().x(subBtn1.x + deltaX).setDuration(200).start()
+                        }
+                        if (subBtn2.visibility == View.VISIBLE) {
+                            subBtn2.animate().x(subBtn2.x + deltaX).setDuration(200).start()
+                        }
 
                         view.animate()
                             .x(nearestX)
@@ -151,6 +188,15 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
                                     view.translationX = 0f
                                     view.translationY = 0f
 
+                                    if (subBtn1.visibility == View.VISIBLE) {
+                                        subBtn1.translationX = 0f
+                                        subBtn1.translationY = 0f
+                                    }
+                                    if (subBtn2.visibility == View.VISIBLE) {
+                                        subBtn2.translationX = 0f
+                                        subBtn2.translationY = 0f
+                                    }
+
                                     view.layoutParams = params
                                 }
                             }
@@ -162,13 +208,20 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
         }
     }
 
-    private fun setAnimation(clicked: Boolean, optBtnTop: Boolean, optBtnLeft: Boolean){
-        if(!clicked){
+    private fun setAnimation(clicked: Boolean, optBtnTop: Boolean, optBtnLeft: Boolean) {
+        if (!clicked && optBtnTop) {
             binding.fabSettings.startAnimation(fromTop)
             binding.copyBtn.startAnimation(fromTop)
-
             binding.optionsBtn.animate().rotation(135f).setDuration(200).start()
-        } else {
+        } else if (!clicked) {
+            binding.fabSettings.startAnimation(fromBottom)
+            binding.copyBtn.startAnimation(fromBottom)
+            binding.optionsBtn.animate().rotation(135f).setDuration(200).start()
+        } else if (!optBtnTop) {
+            binding.fabSettings.startAnimation(toBottom)
+            binding.copyBtn.startAnimation(toBottom)
+            binding.optionsBtn.animate().rotation(0f).setDuration(200).start()
+        }else {
             binding.fabSettings.startAnimation(toTop)
             binding.copyBtn.startAnimation(toTop)
             binding.optionsBtn.animate().rotation(0f).setDuration(200).start()
@@ -229,7 +282,6 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
 
         // this is also new
         lifecycleScope.launch {
