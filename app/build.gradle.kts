@@ -66,6 +66,7 @@ dependencies {
     //implementation("com.github.Dimezis:BlurView:version-3.2.0")
     //implementation("com.github.furkankaplan:fk-blur-view-android:1.0.1")
     implementation("com.github.Dimezis:BlurView:+")
+    implementation("com.github.bumptech.glide:glide:4.16.0")
 
 
     // new
