@@ -1,4 +1,4 @@
-Android application that use a live camera feed to estimate dominant colors an suggests matching colors based on color theory.
+Android application that use a live camera feed to estimate dominant colors and suggests matching colors based on color theory.
 
 Color modes:
 * RGB
@@ -12,6 +12,7 @@ Camera and video flow:
 * Back Camera
 * Pause/unpause (by clicking/expanding the palettes)
 * Adjust capture region by moving and re-shaping the capture rectangle
+* Copy current colors to clipboard.
 
 Available Palettes:
 * Complementary
