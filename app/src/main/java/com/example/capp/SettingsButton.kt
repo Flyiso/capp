@@ -7,6 +7,7 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.RadioGroup
+import androidx.core.content.edit
 
 class SettingsButton(
     view: View,
@@ -48,7 +49,7 @@ class SettingsButton(
             }
 
             val prefs = context.getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
-            prefs.edit().putString("color_mode", newColorMode).apply()
+            prefs.edit { putString("color_mode", newColorMode) }
 
             onColorModeChanged(newColorMode)
         }
@@ -66,8 +67,9 @@ class SettingsButton(
                 R.id.radioFRONT -> "FRONT"
                 else -> "BACK"
             }
-            context.getSharedPreferences("AppSettings", Context.MODE_PRIVATE).edit()
-                .putString("camera_mode", newCameraMode).apply()
+            context.getSharedPreferences("AppSettings", Context.MODE_PRIVATE).edit {
+                putString("camera_mode", newCameraMode)
+            }
             onCameraModeChanged(newCameraMode)
         }
         rootView.alpha = 0.5f
