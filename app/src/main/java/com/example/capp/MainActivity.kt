@@ -237,9 +237,83 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
             binding.copyBtn.visibility=View.INVISIBLE
         }
     }
-    private fun onOptionsBtnClicked(){
+    private fun onOptionsBtnClickedOld(){
         setVisibility(clicked, optBtnTop, optBtnLeft)
         setAnimation(clicked, optBtnTop, optBtnLeft)
+        clicked = !clicked
+    }
+    private fun onOptionsBtnClicked() {
+        val optBtn = binding.optionsBtn
+        val subBtn1 = binding.fabSettings
+        val subBtn2 = binding.copyBtn
+
+        var targetSub1YOffset: Float
+        var targetSub2YOffset: Float
+        if (optBtnTop){
+            targetSub1YOffset = 150f
+            targetSub2YOffset = 300f
+        }else{
+            targetSub1YOffset = -150f
+            targetSub2YOffset = -300f
+        }
+
+        if (!clicked ) {
+            subBtn1.x = optBtn.x
+            subBtn1.y = optBtn.y
+            subBtn2.x = optBtn.x
+            subBtn2.y = optBtn.y
+
+            subBtn1.alpha = 0f
+            subBtn1.scaleX = 1.0f
+            subBtn1.scaleY = 1.0f
+            subBtn1.visibility = View.VISIBLE
+
+            subBtn2.alpha = 0f
+            subBtn2.scaleX = 1.0f
+            subBtn2.scaleY = 1.0f
+            subBtn2.visibility = View.VISIBLE
+
+            subBtn1.animate()
+                .x(optBtn.x)
+                .y(optBtn.y + targetSub1YOffset)
+                .alpha(1f)
+                .scaleX(0.8f)
+                .scaleY(0.8f)
+                .setDuration(500)
+                .setListener(null)
+                .start()
+
+            subBtn2.animate()
+                .x(optBtn.x)
+                .y(optBtn.y + targetSub2YOffset)
+                .alpha(1f)
+                .scaleX(0.8f)
+                .scaleY(0.8f)
+                .setDuration(500)
+                .setListener(null)
+                .start()
+
+        } else {
+            subBtn1.animate()
+                .x(optBtn.x)
+                .y(optBtn.y)
+                .alpha(0f)
+                .scaleX(1.0f)
+                .scaleY(1.0f)
+                .setDuration(300)
+                .withEndAction { subBtn1.visibility = View.GONE }
+                .start()
+
+            subBtn2.animate()
+                .x(optBtn.x)
+                .y(optBtn.y)
+                .alpha(0f)
+                .scaleX(1.0f)
+                .scaleY(1.0f)
+                .setDuration(300)
+                .withEndAction { subBtn2.visibility = View.GONE }
+                .start()
+        }
         clicked = !clicked
     }
     private fun getAverageHsv(bitmap: Bitmap): FloatArray {
