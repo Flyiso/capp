@@ -1,4 +1,4 @@
-package com.example.capp // ⚠️ CHANGE THIS to match your actual app package name
+package com.example.capp
 
 import android.content.Intent
 import android.graphics.drawable.Drawable
@@ -15,6 +15,7 @@ import com.bumptech.glide.request.transition.Transition
 class SplashActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(androidx.appcompat.R.style.Theme_AppCompat_NoActionBar)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_splash)
 
@@ -23,24 +24,18 @@ class SplashActivity : AppCompatActivity() {
         Glide.with(this)
             .asGif()
             .load(R.raw.splash)
-            .diskCacheStrategy(DiskCacheStrategy.RESOURCE) // Eliminates lag by pre-caching frames
+            .diskCacheStrategy(DiskCacheStrategy.RESOURCE)
             .into(object : CustomTarget<GifDrawable>() {
 
                 override fun onResourceReady(resource: GifDrawable, transition: Transition<in GifDrawable>?) {
-                    // 1. Attach the GIF to your ImageView
                     imageView.setImageDrawable(resource)
-
-                    // 2. Tell the GIF to play exactly ONCE
                     resource.setLoopCount(1)
 
-                    // 3. Set up the listener to detect when the GIF finishes playing
                     resource.registerAnimationCallback(object : Animatable2Compat.AnimationCallback() {
                         override fun onAnimationEnd(drawable: Drawable?) {
                             startMainActivity()
                         }
                     })
-
-                    // 4. Start the animation explicitly
                     resource.start()
                 }
 
@@ -50,7 +45,6 @@ class SplashActivity : AppCompatActivity() {
 
                 override fun onLoadFailed(errorDrawable: Drawable?) {
                     super.onLoadFailed(errorDrawable)
-                    // Fail-safe: If the GIF breaks or fails to load, immediately jump to MainActivity
                     startMainActivity()
                 }
             })
@@ -58,6 +52,6 @@ class SplashActivity : AppCompatActivity() {
 
     private fun startMainActivity() {
         startActivity(Intent(this, MainActivity::class.java))
-        finish() // Destroys SplashActivity so hitting "Back" doesn't return here
+        finish()
     }
 }

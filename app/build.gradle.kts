@@ -60,13 +60,9 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
-    //implementation (libs.blurview)
-    //implementation("com.github.Dimezis:BlurView:3.2.0")
-    //implementation("com.github.Dimezis:BlurView:2.0.6")
-    //implementation("com.github.Dimezis:BlurView:version-3.2.0")
-    //implementation("com.github.furkankaplan:fk-blur-view-android:1.0.1")
     implementation("com.github.Dimezis:BlurView:+")
     implementation("com.github.bumptech.glide:glide:4.16.0")
+    implementation("androidx.core:core-splashscreen:1.0.1")
 
 
     // new
@@ -75,18 +71,12 @@ dependencies {
     val camerax_version = "1.7.0-alpha01"
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("com.google.android.material:material:1.11.0")
-    // The following line is optional, as the core library is included indirectly by camera-camera2
     implementation("androidx.camera:camera-core:${camerax_version}")
     implementation("androidx.camera:camera-camera2:${camerax_version}")
-    // If you want to additionally use the CameraX Lifecycle library
     implementation("androidx.camera:camera-lifecycle:${camerax_version}")
-    // If you want to additionally use the CameraX VideoCapture library
     implementation("androidx.camera:camera-video:${camerax_version}")
-    // If you want to additionally use the CameraX View class
     implementation("androidx.camera:camera-view:${camerax_version}")
-    // If you want to additionally add CameraX ML Kit Vision Integration
     implementation("androidx.camera:camera-mlkit-vision:${camerax_version}")
-    // If you want to additionally use the CameraX Extensions library
     implementation("androidx.camera:camera-extensions:${camerax_version}")
 
 }
