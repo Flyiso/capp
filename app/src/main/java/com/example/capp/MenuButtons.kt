@@ -5,6 +5,7 @@ import android.view.View
 import androidx.constraintlayout.widget.ConstraintLayout
 import kotlin.math.abs
 import android.animation.ValueAnimator
+import androidx.core.view.isVisible
 
 
 class MenuButtons(
@@ -19,8 +20,8 @@ class MenuButtons(
     private var startY = 0f
     private var isDragging = false
     // Animation States
-    val standardSpacing = 150f
-    private var physicsAnimator: android.animation.ValueAnimator? = null
+    val standardSpacing = 175f
+    private var physicsAnimator: ValueAnimator? = null
     private var clicked = false
     private var optBtnTop = true
     private var optBtnLeft = true
@@ -47,7 +48,6 @@ class MenuButtons(
                     startX = event.rawX
                     startY = event.rawY
                     isDragging = false
-
                     startPhysicsLoop()
                 }
 
@@ -60,7 +60,7 @@ class MenuButtons(
                     val middleH = parentHeight / 2
                     optBtnTop = view.y + (view.height / 2) < middleH
 
-                    if (!isDragging && (java.lang.Math.abs(event.rawX - startX) > touchSlop || java.lang.Math.abs(event.rawY - startY) > touchSlop)) {
+                    if (!isDragging && (abs(event.rawX - startX) > touchSlop || abs(event.rawY - startY) > touchSlop)) {
                         isDragging = true
                     }
                 }
@@ -88,41 +88,48 @@ class MenuButtons(
                             .withEndAction {
                                 stopPhysicsLoop()
 
-                                val params = view.layoutParams as? androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
+                                val params = view.layoutParams as? ConstraintLayout.LayoutParams
                                 if (params != null) {
-                                    params.leftToLeft = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.UNSET
-                                    params.leftToRight = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.UNSET
-                                    params.rightToLeft = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.UNSET
-                                    params.rightToRight = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.UNSET
-                                    params.startToStart = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.UNSET
-                                    params.startToEnd = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.UNSET
-                                    params.endToStart = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.UNSET
-                                    params.endToEnd = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.UNSET
+                                    params.leftToLeft = ConstraintLayout.LayoutParams.UNSET
+                                    params.leftToRight = ConstraintLayout.LayoutParams.UNSET
+                                    params.rightToLeft = ConstraintLayout.LayoutParams.UNSET
+                                    params.rightToRight = ConstraintLayout.LayoutParams.UNSET
+                                    params.startToStart = ConstraintLayout.LayoutParams.UNSET
+                                    params.startToEnd = ConstraintLayout.LayoutParams.UNSET
+                                    params.endToStart = ConstraintLayout.LayoutParams.UNSET
+                                    params.endToEnd = ConstraintLayout.LayoutParams.UNSET
 
-                                    params.topToTop = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
-                                    params.topToBottom = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.UNSET
-                                    params.bottomToTop = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.UNSET
-                                    params.bottomToBottom = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.UNSET
+                                    params.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+                                    params.topToBottom = ConstraintLayout.LayoutParams.UNSET
+                                    params.bottomToTop = ConstraintLayout.LayoutParams.UNSET
+                                    params.bottomToBottom = ConstraintLayout.LayoutParams.UNSET
 
                                     params.topMargin = view.y.toInt()
 
                                     if (isLeft) {
-                                        params.leftToLeft = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+                                        params.leftToLeft = ConstraintLayout.LayoutParams.PARENT_ID
                                         params.leftMargin = 0
                                     } else {
-                                        params.rightToRight = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+                                        params.rightToRight = ConstraintLayout.LayoutParams.PARENT_ID
                                         params.rightMargin = 0
                                     }
                                     view.translationX = 0f
                                     view.translationY = 0f
                                     view.layoutParams = params
 
-                                    subButtons.forEach { subButton ->
-                                        if (!clicked) {
-                                            subButton.view.x = view.x
-                                            subButton.view.y = view.y
+                                    view.post {
+                                        subButtons.forEach { subButton ->
+                                            if (!clicked) {
+                                                subButton.view.x = view.x
+                                                subButton.view.y = view.y
+                                            } else {
+                                                val adjustedOffset = subButton.buttonId * standardSpacing * (if (optBtnTop) 1 else -1).toFloat()
+                                                subButton.view.x = view.x
+                                                subButton.view.y = view.y + adjustedOffset
+                                            }
                                         }
                                     }
+
                                 }
                             }
                             .start()
@@ -134,7 +141,6 @@ class MenuButtons(
         subButtons.forEach { subButton ->
             subButton.view.setOnClickListener {
                 subButton.onClickAction()
-                //onMainBtnClicked()
             }
         }
     }
@@ -191,22 +197,35 @@ class MenuButtons(
     }
 
     private fun updateSubButtonPhysics() {
-        val interpolationFactor = 0.18f
+        val interpolationFactor = 0.22f
 
-        subButtons.forEach { subButton ->
+        subButtons.forEachIndexed { index, subButton ->
             val subView = subButton.view
+            val leaderX: Float
+            val leaderY: Float
 
-            val targetX = optBtn.x
-            val targetY = if (clicked) {
-                val adjustedOffset = subButton.buttonId * standardSpacing * (if (optBtnTop) 1 else -1).toFloat()
-                optBtn.y + adjustedOffset
+            if (index == 0) {
+                leaderX = optBtn.x
+                leaderY = if (clicked) {
+                    val adjustedOffset = subButton.buttonId * standardSpacing * (if (optBtnTop) 1 else -1).toFloat()
+                    optBtn.y + adjustedOffset
+                } else {
+                    optBtn.y
+                }
             } else {
-                optBtn.y
+                val leaderButton = subButtons[index - 1].view
+                leaderX = leaderButton.x
+                leaderY = if (clicked) {
+                    val directionalSpacing = standardSpacing * (if (optBtnTop) 1 else -1).toFloat()
+                    leaderButton.y + directionalSpacing
+                } else {
+                    leaderButton.y
+                }
             }
-            val nextX = subView.x + (targetX - subView.x) * interpolationFactor
-            val nextY = subView.y + (targetY - subView.y) * interpolationFactor
+            val nextX = subView.x + (leaderX - subView.x) * interpolationFactor
+            val nextY = subView.y + (leaderY - subView.y) * interpolationFactor
 
-            if (subView.visibility == View.VISIBLE || clicked) {
+            if (subView.isVisible || clicked) {
                 subView.x = nextX
                 subView.y = nextY
             } else {
