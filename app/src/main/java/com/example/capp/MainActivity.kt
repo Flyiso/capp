@@ -38,6 +38,8 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
     private var currentColorMode = "HSV"
     private var currentCameraMode = "BACK"
     private var lastSetColor = floatArrayOf(0f, 1f, 1f)
+    private var lastProcessedTime = 0L
+    private val frameIntervalMs = 150L
 
     private fun getAverageHsv(bitmap: Bitmap): FloatArray {
         val tinyBitmap = Bitmap.createScaledBitmap(bitmap, 1, 1, true)
@@ -57,7 +59,6 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // this is also new
         lifecycleScope.launch {
             withContext(Dispatchers.IO) {
                 ColorMatches.initializeDatabase(applicationContext)
@@ -189,20 +190,25 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
             imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
-                if (isCameraFrozen) {
+                val currentTime = System.currentTimeMillis()
+                if (isCameraFrozen || (currentTime - lastProcessedTime) < frameIntervalMs) {
                     imageProxy.close()
                     return@setAnalyzer
                 }
+                lastProcessedTime = currentTime
 
                 val rotation = imageProxy.imageInfo.rotationDegrees
                 val uiRect = binding.scannerOverlay.getSelectionRect()
                 val bitmap = imageProxy.toBitmap()
                 val rotatedBitmap = rotateBitmap(bitmap, rotation)
+                bitmap.recycle()
                 lastFullBitmap = rotatedBitmap
 
                 val finalBitmap = cropToScanner(rotatedBitmap, uiRect)
+
                 //showDebugCrop(finalBitmap)
                 val tinyBitmap = Bitmap.createScaledBitmap(finalBitmap, 1, 1, true)
+
                 val averageColor = tinyBitmap.getPixel(0, 0)
                 val hsv = FloatArray(3)
                 Color.colorToHSV(averageColor, hsv)
