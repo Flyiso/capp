@@ -5,12 +5,15 @@ import android.view.View
 import androidx.constraintlayout.widget.ConstraintLayout
 import kotlin.math.abs
 import android.animation.ValueAnimator
+import android.content.Context
 import androidx.core.view.isVisible
+
 
 
 class MenuButtons(
     private val optBtn: View,
-    private val subButtons: List<MenuSubButton>
+    private val subButtons: List<MenuSubButton>,
+    private val context: Context
 ) {
     // SETUP VARIABLES
     // Coordinate Tracking
@@ -19,8 +22,11 @@ class MenuButtons(
     private var startX = 0f
     private var startY = 0f
     private var isDragging = false
+    // display adjusted sizing
+    val density = context.resources.displayMetrics.density
+    val baseSpacingDp = 66f
+    val standardSpacing = baseSpacingDp * density
     // Animation States
-    val standardSpacing = 175f
     private var physicsAnimator: ValueAnimator? = null
     private var clicked = false
     private var optBtnTop = true
@@ -207,7 +213,7 @@ class MenuButtons(
             if (index == 0) {
                 leaderX = optBtn.x
                 leaderY = if (clicked) {
-                    val adjustedOffset = subButton.buttonId * standardSpacing * (if (optBtnTop) 1 else -1).toFloat()
+                    val adjustedOffset = (subButton.buttonId + 1) * standardSpacing * (if (optBtnTop) 1 else -1).toFloat()
                     optBtn.y + adjustedOffset
                 } else {
                     optBtn.y

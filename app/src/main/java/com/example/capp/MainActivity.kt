@@ -144,7 +144,8 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
         )
         menuButtons = MenuButtons(
             optBtn = binding.optionsBtn,
-            subButtons = listOf(settingsButton, copyButton)
+            subButtons = listOf(settingsButton, copyButton),
+            this
         )
 
         cameraExecutor = Executors.newSingleThreadExecutor()
