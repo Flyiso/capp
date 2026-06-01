@@ -88,25 +88,25 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
         palettes = listOf(
             ColorPalette("Complementary", binding.sectionComp, binding.sectionCompBlur,
                 listOf(0f, 180f), listOf(0f, 0f), listOf(0f, 0f),
-                onExpandCallback),
+                onExpandCallback, this),
             ColorPalette("Analogous", binding.sectionAnalog, binding.sectionAnalogBlur,
                 listOf(0f, 30f, -30f), listOf(0f, 0f, 0f), listOf(0f, 0f, 0f),
-                onExpandCallback),
+                onExpandCallback, this),
             ColorPalette("Split Complementary", binding.sectionSplitcomp, binding.sectionSplitcompBlur,
                 listOf(0f, 150f, 210f) , listOf(0f, 0f, 0f), listOf(0f, 0f, 0f),
-                onExpandCallback),
+                onExpandCallback, this),
             ColorPalette("Triadic", binding.sectionTri, binding.sectionTriBlur,
                 listOf(0f, 120f, 240f), listOf(0f, 0f, 0f), listOf(0f, 0f, 0f),
-                onExpandCallback),
+                onExpandCallback, this),
             ColorPalette("Square", binding.sectionSquare, binding.sectionSquareBlur,
                 listOf(0f, 90f, 180f, 270f), listOf(0f, 0f, 0f, 0f), listOf(0f, 0f, 0f, 0f),
-                onExpandCallback),
+                onExpandCallback, this),
             ColorPalette("Tetradic", binding.sectionTet, binding.sectionTetBlur,
                 listOf(0f, 60f, 180f, 240f), listOf(0f, 0f, 0f, 0f), listOf(0f, 0f, 0f, 0f),
-                onExpandCallback),
+                onExpandCallback, this),
             ColorPalette("Monochromatic",binding.sectionMono,binding.sectionMonoBlur,
                 listOf(0f, 0f, 0f, 0f, 0f),listOf(-35f, -0f, 10f, 20f, -70f),listOf(15f, 0f, -25f, -50f, 20f),
-                onExpandCallback))
+                onExpandCallback, this))
 
         binding.root.post {
             palettes.forEach { palette ->

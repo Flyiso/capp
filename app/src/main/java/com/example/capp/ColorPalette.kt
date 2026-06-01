@@ -22,6 +22,7 @@ import kotlin.math.abs
 import kotlin.math.min
 import java.math.BigDecimal
 import java.math.RoundingMode
+import android.util.TypedValue
 
 data class NcsColor(
     val fullCode: String,
@@ -295,8 +296,17 @@ data class ColorPalette(
     val hueShifts: List<Float>,
     val satShifts: List<Float>,
     val valShifts: List<Float>,
-    val onExpandListener: (palette: ColorPalette, isExpanding: Boolean) -> Unit
+    val onExpandListener: (palette: ColorPalette, isExpanding: Boolean) -> Unit,
+    private val context: Context
 ) {
+    // adaptive text size setting:
+    val physicalWidth = context.resources.displayMetrics.widthPixels.toFloat()
+    val textScale = physicalWidth / 1080f
+    val baseNameSize = 40.0f
+    val baseTxtSize = 25.0f
+    val txtSize = baseTxtSize * textScale
+    val nameSize = baseNameSize * textScale
+
     private var isExpanded = false
     private val boxViews = mutableListOf<ImageView>()
     private val textViews = mutableListOf<TextView>()
@@ -374,7 +384,7 @@ data class ColorPalette(
                 setPadding(10.dpToPx(), 20.dpToPx(), 0, 0)
                 gravity = Gravity.LEFT
                 setTextColor(Color.WHITE)
-                textSize = 10f
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, txtSize)
                 setShadowLayer(4f, 0f, 0f, Color.BLACK)
                 alpha = 0f
                 elevation = 8f
@@ -390,8 +400,8 @@ data class ColorPalette(
 
         val label = TextView(context).apply {
             text = name
-            textSize = 16f
             setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, nameSize)
             setPadding(21, 3, 24, 6)
             setShadowLayer(4f, 2f, 2f, Color.BLACK)
 
